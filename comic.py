@@ -26,44 +26,61 @@ def get_db_connection():
             password=db_config['password'],
             database=db_config['database']
         )
+        print("Database connection successful")
         return conn
     except mysql.connector.Error as err:
-        print(f"Something went wrong: {err}")
+        print(f"Database connection error: {err}")
         return None
+
+# Debug route to check if server is running
+@app.route('/debug')
+def debug():
+    return jsonify({
+        "status": "running",
+        "routes": [str(rule) for rule in app.url_map.iter_rules()]
+    })
 
 # Route for home page
 @app.route('/')
 def home():
+    print("Home route accessed")
     return "Welcome to the Comic API!"
 
 # Get all comics
 @app.route('/comic', methods=['GET'])
 def get_comics():
+    print("GET /comic route accessed")
     conn = get_db_connection()
     if conn is None:
+        print("Failed to connect to database")
         return jsonify({"error": "Failed to connect to database"}), 500
     
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM comic")
-    comics = cursor.fetchall()
-    
-    # Convert the tuple data into a dictionary with appropriate keys
-    comics_list = []
-    for comic in comics:
-        comics_list.append({
-            "comic_id": comic[0],
-            "comic_name": comic[1],
-            "author": comic[2],
-            "genre": comic[3].split(',') if comic[3] else [],  # Convert comma-separated string to list
-            "status": comic[4],
-            "description": comic[5],
-            "comic_art": comic[6]
-        })
-    
-    cursor.close()
-    conn.close()
-    
-    return jsonify(comics_list)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM comic")
+        comics = cursor.fetchall()
+        print(f"Found {len(comics)} comics")
+        
+        # Convert the tuple data into a dictionary with appropriate keys
+        comics_list = []
+        for comic in comics:
+            comics_list.append({
+                "comic_id": comic[0],
+                "comic_name": comic[1],
+                "author": comic[2],
+                "genre": comic[3].split(',') if comic[3] else [],  # Convert comma-separated string to list
+                "status": comic[4],
+                "description": comic[5],
+                "comic_art": comic[6]
+            })
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify(comics_list)
+    except Exception as e:
+        print(f"Error in get_comics: {e}")
+        return jsonify({"error": str(e)}), 500
 
 # Get a specific comic based on its ID
 @app.route('/comic/<int:comic_id>', methods=['GET'])
@@ -255,4 +272,8 @@ def delete_comic(comic_id):
         return jsonify({"error": f"Failed to delete comic: {err}"}), 500
 
 if __name__ == '__main__':
-    app.run(port=5001, debug=True)
+    print("Starting Comic API server...")
+    print("Available routes:")
+    for rule in app.url_map.iter_rules():
+        print(f"- {rule}")
+    app.run(host='0.0.0.0', port=5001, debug=True)
