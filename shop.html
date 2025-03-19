@@ -87,8 +87,8 @@
 
                             <!-- Button Text based on stock availability -->
                             <button class="btn btn-primary"
-                                @click="product.quantity_in_stock === 0 ? preorder(product) : addToCart(product)">
-                                {{ product.quantity_in_stock === 0 ? 'Reserve Book' : 'Add to Cart' }}
+                                @click="product.quantity_in_stock > 0 ? addToCart(product) : addToWaitlist(product)">
+                                {{ product.quantity_in_stock > 0 ? 'Purchase' : 'Join Waitlist' }}
                             </button>
                         </div>
                     </div>
@@ -168,22 +168,58 @@
                     });
             },
             methods: {
-                // Set selected product and its stock to be updated
+                // Set selected product and its stock to be updated (Demo Purposes Only!)
                 selectProduct(product) {
                     this.selectedProduct = product;
                     this.newStock = product.quantity_in_stock; // Pre-fill the stock input with the current stock
                 },
-                // Add product to cart (Placeholder function)
+
+
+                // Add product to cart
                 addToCart(product) {
                     console.log(`${product.comic_name} - Volume ${product.volume_name} - ${this.users.name} of id ${this.users.id} clicked on Add to Cart!`);
-                    // Implement actual cart logic here
-                },
-                // Preorder product (Placeholder function)
-                preorder(product) {
-                    console.log(`${product.comic_name} - Volume ${product.volume_name} - ${this.users.name} id ${this.users.id} clicked on Preorder!`);
-                    // Implement actual preorder logic here
+                
+                    // Construct URL with the user_id and product_id
+                    const url = `http://localhost:5002/composite/${this.users.id}/${product.Id}`;
+
+                    // Send a GET request to the backend
+                    fetch(url, {
+                        method: 'GET',
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            // Just log the obtained JSON data to the console
+                            console.log('Received data:', data);
+                        })
+                        .catch(error => {
+                            console.error('Error adding to waitlist:', error);
+                            alert('Error adding to waitlist. Please try again.');
+                        });
                 },
 
+
+
+                addToWaitlist(product) {
+                    console.log(`${product.comic_name} - Volume ${product.volume_name} - ${this.users.name} id ${this.users.id} clicked on Join Waitlist!`);
+
+                    // Construct URL with the user_id and product_id
+                    const url = `http://localhost:5001/composite/${this.users.id}/${product.Id}`;
+
+                    // Send a GET request to the backend
+                    fetch(url, {
+                        method: 'GET',
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            // Just log the obtained JSON data to the console
+                            console.log('Received data:', data);
+                        })
+                        .catch(error => {
+                            console.error('Error adding to waitlist:', error);
+                            alert('Error adding to waitlist. Please try again.');
+                        });
+                },
+                
                 // Update stock using the API (FOR DEMO)
                 updateStock() {
                     const updatedProduct = {
