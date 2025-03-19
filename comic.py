@@ -3,6 +3,9 @@ import mysql.connector
 from datetime import datetime
 from enum import Enum
 from flask_cors import CORS
+import base64
+from werkzeug.utils import secure_filename
+import os
 
 app = Flask(__name__)
 
@@ -46,6 +49,78 @@ def home():
     print("Home route accessed")
     return "Welcome to the Comic API!"
 
+# Upload comic image
+@app.route('/comic/<int:comic_id>/image', methods=['POST'])
+def upload_comic_image(comic_id):
+    print(f"Uploading image for comic {comic_id}")
+    
+    if 'image' not in request.files:
+        return jsonify({"error": "No image file provided"}), 400
+    
+    file = request.files['image']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+    
+    if file:
+        try:
+            # Read the image file
+            image_data = file.read()
+            
+            # Update the database with the image
+            conn = get_db_connection()
+            if conn is None:
+                return jsonify({"error": "Failed to connect to database"}), 500
+            
+            cursor = conn.cursor()
+            update_query = "UPDATE comic SET comic_art = %s WHERE comic_id = %s"
+            cursor.execute(update_query, (image_data, comic_id))
+            
+            if cursor.rowcount == 0:
+                cursor.close()
+                conn.close()
+                return jsonify({"error": "Comic not found"}), 404
+            
+            conn.commit()
+            cursor.close()
+            conn.close()
+            
+            return jsonify({"message": "Image uploaded successfully"})
+            
+        except Exception as e:
+            print(f"Error uploading image: {e}")
+            return jsonify({"error": str(e)}), 500
+
+# Get comic image
+@app.route('/comic/<int:comic_id>/image', methods=['GET'])
+def get_comic_image(comic_id):
+    print(f"Getting image for comic {comic_id}")
+    
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"error": "Failed to connect to database"}), 500
+    
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT comic_art FROM comic WHERE comic_id = %s", (comic_id,))
+        result = cursor.fetchone()
+        
+        if not result or not result[0]:
+            cursor.close()
+            conn.close()
+            return jsonify({"error": "Image not found"}), 404
+        
+        # Convert BLOB to base64
+        image_data = base64.b64encode(result[0]).decode('utf-8')
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({"image": image_data})
+        
+    except Exception as e:
+        print(f"Error getting image: {e}")
+        return jsonify({"error": str(e)}), 500
+
 # Get all comics
 @app.route('/comic', methods=['GET'])
 def get_comics():
@@ -64,6 +139,11 @@ def get_comics():
         # Convert the tuple data into a dictionary with appropriate keys
         comics_list = []
         for comic in comics:
+            # Convert binary image data to base64 if it exists
+            comic_art = None
+            if comic[6]:  # If comic_art exists
+                comic_art = base64.b64encode(comic[6]).decode('utf-8')
+            
             comics_list.append({
                 "comic_id": comic[0],
                 "comic_name": comic[1],
@@ -71,7 +151,7 @@ def get_comics():
                 "genre": comic[3].split(',') if comic[3] else [],  # Convert comma-separated string to list
                 "status": comic[4],
                 "description": comic[5],
-                "comic_art": comic[6]
+                "comic_art": comic_art
             })
         
         cursor.close()

@@ -23,9 +23,38 @@
             margin-right: 5px;
             margin-bottom: 5px;
         }
+        .comic-image-container {
+            width: 100%;
+            aspect-ratio: 1/1; /* Creates a perfect square */
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 1rem;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            max-width: 300px; /* Limit maximum size */
+            margin-left: auto;
+            margin-right: auto;
+        }
         .comic-image {
-            height: 300px;
+            width: 100%;
+            height: 100%;
             object-fit: cover;
+            object-position: center top;
+        }
+        .image-placeholder {
+            width: 100%;
+            aspect-ratio: 1/1; /* Creates a perfect square */
+            background-color: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+            border-radius: 4px;
+            max-width: 300px; /* Limit maximum size */
+            margin-left: auto;
+            margin-right: auto;
         }
     </style>
 </head>
@@ -89,30 +118,43 @@
                 return;
             }
 
-            container.innerHTML = comics.map(comic => `
-                <div class="col-md-4 mb-4">
-                    <div class="card comic-card">
-                        <div class="card-body">
-                            <span class="badge bg-${getStatusColor(comic.status)} status-badge">
-                                ${comic.status}
-                            </span>
-                            <h5 class="card-title">${comic.comic_name}</h5>
-                            <h6 class="card-subtitle mb-2 text-muted">By ${comic.author}</h6>
-                            <div class="mb-3">
-                                ${comic.genre.map(genre => `
-                                    <span class="badge bg-secondary genre-badge">${genre}</span>
-                                `).join('')}
+            container.innerHTML = comics.map(comic => {
+                console.log(`Processing comic: ${comic.comic_name}, Has image: ${comic.comic_art ? 'Yes' : 'No'}`);
+                return `
+                    <div class="col-md-4 mb-4">
+                        <div class="card comic-card">
+                            <div class="card-body">
+                                <span class="badge bg-${getStatusColor(comic.status)} status-badge">
+                                    ${comic.status}
+                                </span>
+                                <h5 class="card-title">${comic.comic_name}</h5>
+                                <h6 class="card-subtitle mb-2 text-muted">By ${comic.author}</h6>
+                                
+                                ${comic.comic_art ? `
+                                    <div class="comic-image-container">
+                                        <img src="data:image/webp;base64,${comic.comic_art}" 
+                                             class="comic-image" 
+                                             alt="${comic.comic_name}"
+                                             onerror="this.onerror=null; this.src='images/placeholder.webp'; console.error('Error loading image for ${comic.comic_name}');"
+                                        >
+                                    </div>
+                                ` : `
+                                    <div class="image-placeholder">
+                                        <span>No image available</span>
+                                    </div>
+                                `}
+                                
+                                <div class="mb-3">
+                                    ${comic.genre.map(genre => `
+                                        <span class="badge bg-secondary genre-badge">${genre}</span>
+                                    `).join('')}
+                                </div>
+                                <p class="card-text">${comic.description}</p>
                             </div>
-                            <p class="card-text">${comic.description}</p>
-                            ${comic.comic_art ? `
-                                <img src="data:image/jpeg;base64,${comic.comic_art}" 
-                                     class="img-fluid comic-image mb-3" 
-                                     alt="${comic.comic_name}">
-                            ` : ''}
                         </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         // Function to get status badge color
