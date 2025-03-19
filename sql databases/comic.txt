@@ -1,0 +1,20 @@
+-- Create the comic database
+CREATE DATABASE IF NOT EXISTS comic_db;
+USE comic_db;
+
+-- Create the comic table
+CREATE TABLE IF NOT EXISTS comic (
+    comic_id INT AUTO_INCREMENT PRIMARY KEY,
+    comic_name VARCHAR(255) NOT NULL,
+    author VARCHAR(255) NOT NULL,
+    genre VARCHAR(255),
+    status ENUM('ongoing', 'completed', 'hiatus') NOT NULL,
+    description TEXT,
+    comic_art BLOB
+);
+
+-- Insert some sample data
+INSERT INTO comic (comic_name, author, genre, status, description) VALUES
+('One Piece', 'Eiichiro Oda', 'Action,Adventure,Fantasy', 'ongoing', 'Follow Monkey D. Luffy and his pirate crew in their search for the ultimate treasure, the One Piece.'),
+('Attack on Titan', 'Hajime Isayama', 'Action,Drama,Fantasy', 'completed', 'Humanity lives inside cities surrounded by enormous walls due to the Titans, gigantic humanoid creatures who devour humans seemingly without reason.'),
+('Demon Slayer', 'Koyoharu Gotouge', 'Action,Fantasy', 'completed', 'Tanjiro Kamado''s peaceful life is shattered when his family is slaughtered by demons. His sister Nezuko is turned into a demon, but still shows signs of human emotion and thought.'); 
