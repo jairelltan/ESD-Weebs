@@ -117,6 +117,8 @@
 
     </script>
 
+
+
     <script>
         const app = Vue.createApp({
             data() {
@@ -129,7 +131,7 @@
                 };
             },
             mounted() {
-                // Fetch product data when the component is mounted
+                // Products
                 fetch('https://personal-dwnxuxog.outsystemscloud.com/InventoryAtomicMicroservice/rest/RESTAPI/GetAllProducts')
                     .then(response => response.json())
                     .then(data => {
@@ -141,6 +143,7 @@
                         this.loading = false; // Set loading to false in case of an error
                     });
 
+                // User
                 fetch('http://localhost:5000/user/1')
                     .then(response => response.json())
                     .then(data => {
