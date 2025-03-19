@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shop</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+
+
+    <style>
+        .product-image {
+            width: 100%;
+            height: 250px;
+            object-fit: contain;
+        }
+
+        /* Loading spinner styling */
+        .loading-screen {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 9999;
+        }
+
+        .cart-icon {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            font-size: 30px;
+            color: #000;
+            z-index: 1000;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <div class="cart-icon" @click="toggleCartModal">
+            <i class="bi bi-cart-fill"></i> <!-- You can use any icon library like Bootstrap Icons -->
+        </div>
+        <!-- Loading Screen -->
+        <div v-if="loading" class="loading-screen">
+            <div class="spinner-border text-light" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+
+        <!-- Welcome Section -->
+        <div class="container mt-3">
+            <div class="bg-light p-5 rounded text-center">
+                <h1 class="display-4">Welcome to the Shop!</h1>
+                <p class="lead">Buy books to support your favourite comic book creators.</p>
+                <p> You are: {{users.name}}</p>
+                <p> Points: {{users.points}}</p>
+                <hr class="my-4">
+                <p>If the book is out of stock, try out the preorder function!</p>
+            </div>
+        </div>
+
+        <!-- Products Section -->
+        <div class="container mt-5" v-if="!loading">
+            <div class="row">
+                <div class="col-md-4" v-for="product in products" :key="product.Id">
+                    <div class="card mb-4" @click="selectProduct(product)">
+                        <img :src="`data:image/jpeg;base64,${product.image}`" class="card-img-top product-image"
+                            alt="Product Image">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ product.comic_name }} - Volume {{ product.volume_name }}</h5>
+                            <p class="card-text">Price: ${{ product.price_per_item.toFixed(2) }}</p>
+                            <p class="card-text">Stock: {{ product.quantity_in_stock }} available</p>
+
+                            <!-- Button Text based on stock availability -->
+                            <button class="btn btn-primary"
+                                @click="product.quantity_in_stock === 0 ? preorder(product) : addToCart(product)">
+                                {{ product.quantity_in_stock === 0 ? 'Reserve Book' : 'Add to Cart' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stock Update Form (For Demo Purposes)-->
+        <div class="container mt-5">
+            <h2 v-if="selectedProduct">Update Stock for {{ selectedProduct.comic_name }} - Volume {{
+                selectedProduct.volume_name }}</h2>
+            <form @submit.prevent="updateStock">
+                <div class="mb-3">
+                    <label for="stock" class="form-label">New Stock Quantity</label>
+                    <input type="number" id="stock" class="form-control" v-model="newStock" min="0" required>
+                </div>
+                <button type="submit" class="btn btn-success" :disabled="selectedProduct === null">Update Stock</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <script>
+
+    </script>
+
+    <script>
+        const app = Vue.createApp({
+            data() {
+                return {
+                    products: [], // Empty array to store products
+                    loading: true, // Set loading state to true initially
+                    selectedProduct: null, // Store selected product for stock update
+                    newStock: 0, // New stock value for the form
+                    users: {}
+                };
+            },
+            mounted() {
+                // Fetch product data when the component is mounted
+                fetch('https://personal-dwnxuxog.outsystemscloud.com/InventoryAtomicMicroservice/rest/RESTAPI/GetAllProducts')
+                    .then(response => response.json())
+                    .then(data => {
+                        this.products = data.Products; // Store products from API in Vue data
+                        this.loading = false; // Set loading to false when data is loaded
+                    })
+                    .catch(error => {
+                        console.error('Error fetching products:', error);
+                        this.loading = false; // Set loading to false in case of an error
+                    });
+
+                fetch('http://localhost:5000/user/1')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data) {
+                            this.users = {
+                                id: data.id,
+                                name: data.name,
+                                phone: data.phone,
+                                email: data.email,
+                                address: data.address,
+                                points: data.points,
+                                status: data.status
+                            };
+                        } else {
+                            console.error('No data returned for the user with ID 1');
+                        }
+                        this.loading = false;
+                    })
+                    .catch(error => {
+                        console.error('Error fetching user data:', error);
+                        this.loading = false;
+                    });
+            },
+            methods: {
+                // Set selected product and its stock to be updated
+                selectProduct(product) {
+                    this.selectedProduct = product;
+                    this.newStock = product.quantity_in_stock; // Pre-fill the stock input with the current stock
+                },
+                // Add product to cart (Placeholder function)
+                addToCart(product) {
+                    console.log(`${product.comic_name} - Volume ${product.volume_name} - ${this.users.name} of id ${this.users.id} clicked on Add to Cart!`);
+                    // Implement actual cart logic here
+                },
+                // Preorder product (Placeholder function)
+                preorder(product) {
+                    console.log(`${product.comic_name} - Volume ${product.volume_name} - ${this.users.name} id ${this.users.id} clicked on Preorder!`);
+                    // Implement actual preorder logic here
+                },
+
+                // Update stock using the API (FOR DEMO)
+                updateStock() {
+                    const updatedProduct = {
+                        ...this.selectedProduct,
+                        quantity_in_stock: this.newStock,
+                    };
+
+                    fetch('https://personal-dwnxuxog.outsystemscloud.com/InventoryAtomicMicroservice/rest/RESTAPI/UpdateStock', {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(updatedProduct),
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            alert('Stock updated successfully!');
+                            this.selectedProduct.quantity_in_stock = this.newStock;
+                            this.selectedProduct = null;
+                            this.newStock = 0;
+                        })
+                        .catch(error => {
+                            console.error('Error updating stock:', error);
+                            alert('Error updating stock. Please try again.');
+                        });
+                },
+            }
+        })
+
+
+        app.mount('#app');
+    </script>
+</body>
+
+</html>
