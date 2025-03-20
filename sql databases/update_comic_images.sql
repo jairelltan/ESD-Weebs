@@ -1,5 +1,4 @@
 -- Set secure_file_priv to allow file loading
-SET GLOBAL secure_file_priv = '';
 
 -- Update One Piece image
 UPDATE comic 
