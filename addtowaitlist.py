@@ -77,5 +77,5 @@ def get_composite_data(user_id, product_id):
     return jsonify(composite_data)
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5001)
+    app.run(debug=True, port=5002)
 
