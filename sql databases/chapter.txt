@@ -1,0 +1,123 @@
+-- Create a new database for chapters
+CREATE DATABASE IF NOT EXISTS chapter_db;
+USE chapter_db;
+
+-- Create chapters table
+DROP TABLE IF EXISTS chapter_pages;
+DROP TABLE IF EXISTS chapter;
+
+CREATE TABLE IF NOT EXISTS chapter (
+    chapter_id INT AUTO_INCREMENT PRIMARY KEY,
+    comic_id INT NOT NULL,
+    chapter_number INT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    release_date DATE NOT NULL,
+    UNIQUE KEY unique_chapter (comic_id, chapter_number)
+);
+
+-- Create chapter pages table to store multiple images per chapter
+CREATE TABLE IF NOT EXISTS chapter_pages (
+    page_id INT AUTO_INCREMENT PRIMARY KEY,
+    comic_id INT NOT NULL,
+    chapter_id INT NOT NULL,
+    page_number INT NOT NULL,
+    page_image LONGBLOB NOT NULL,
+    UNIQUE KEY unique_page (comic_id, chapter_id, page_number),
+    FOREIGN KEY (chapter_id) REFERENCES chapter(chapter_id) ON DELETE CASCADE
+);
+
+-- Insert chapters data
+-- One Piece (comic_id = 1)
+INSERT INTO chapter (comic_id, chapter_number, title, release_date) VALUES
+(1, 1, 'Romance Dawn', '2023-01-01'),
+(1, 2, 'They Call Him Strawhat Luffy', '2023-01-08'),
+(1, 3, 'That Boy The Straw Hat Wearing Luffy', '2023-01-15'),
+(1, 1140, 'Chapter 1140', '2023-03-01'),
+(1, 1141, 'Chapter 1141', '2023-03-08');
+
+-- Attack on Titan (comic_id = 2)
+INSERT INTO chapter (comic_id, chapter_number, title, release_date) VALUES
+(2, 1, 'To You, in 2000 Years', '2023-01-01'),
+(2, 2, 'On That Day', '2023-01-08'),
+(2, 3, 'The Night of the Disbanding', '2023-01-15'),
+(2, 138, 'A Long Dream', '2023-05-01'),
+(2, 139, 'Heading to the Tree On Top of the Hill', '2023-05-08');
+
+-- Demon Slayer (comic_id = 3)
+INSERT INTO chapter (comic_id, chapter_number, title, release_date) VALUES
+(3, 1, 'Cruelty', '2023-01-01'),
+(3, 2, 'A Person Unknown', '2023-01-08'),
+(3, 3, 'I Will Return Before Dawn', '2023-01-15'),
+(3, 204, 'Chapter 204', '2023-05-01'),
+(3, 205, 'Chapter 205', '2023-05-08');
+
+-- Solo Leveling (comic_id = 4)
+INSERT INTO chapter (comic_id, chapter_number, title, release_date) VALUES
+(4, 1, 'Chapter 1', '2023-02-01'),
+(4, 2, 'Chapter 2', '2023-02-08'),
+(4, 3, 'Chapter 3', '2023-02-15'),
+(4, 177, 'Chapter 177', '2023-03-01'),
+(4, 178, 'Chapter 178', '2023-03-08');
+
+-- Sweet Home (comic_id = 5)
+INSERT INTO chapter (comic_id, chapter_number, title, release_date) VALUES
+(5, 1, 'Episode 1', '2023-02-01'),
+(5, 2, 'Episode 2', '2023-02-08'),
+(5, 3, 'Episode 3', '2023-02-15'),
+(5, 140, 'Episode 140', '2023-05-01'),
+(5, 141, 'Episode 141', '2023-05-08');
+
+-- Tower of God (comic_id = 6)
+INSERT INTO chapter (comic_id, chapter_number, title, release_date) VALUES
+(6, 1, 'Season 1 Episode 1', '2023-03-01'),
+(6, 2, 'Season 1 Episode 2', '2023-03-08'),
+(6, 3, 'Season 1 Episode 3', '2023-03-15'),
+(6, 649, 'Season 3 Episode 649', '2023-05-01'),
+(6, 650, 'Season 3 Episode 650', '2023-05-08');
+
+-- Invincible (comic_id = 7)
+INSERT INTO chapter (comic_id, chapter_number, title, release_date) VALUES
+(7, 1, 'Chapter 1', '2023-03-01'),
+(7, 2, 'Chapter 2', '2023-03-08'),
+(7, 3, 'Chapter 3', '2023-03-15'),
+(7, 143, 'Chapter 143', '2023-05-01'),
+(7, 144, 'Chapter 144', '2023-05-08');
+
+-- Naruto (comic_id = 8)
+INSERT INTO chapter (comic_id, chapter_number, title, release_date) VALUES
+(8, 1, 'Naruto Uzumaki!!', '2023-04-01'),
+(8, 2, 'Konohamaru!!', '2023-04-08'),
+(8, 3, 'Sasuke Uchiha!!', '2023-04-15'),
+(8, 699, 'The Seal of Reconciliation', '2023-05-01'),
+(8, 700, 'Uzumaki Naruto!!', '2023-05-08');
+
+-- Bleach (comic_id = 9)
+INSERT INTO chapter (comic_id, chapter_number, title, release_date) VALUES
+(9, 1, 'Strawberry & the Soul Reapers', '2023-04-01'),
+(9, 2, 'Starter', '2023-04-08'),
+(9, 3, 'Head-Hittin', '2023-04-15'),
+(9, 487, 'Breathe But Blind', '2023-05-01'),
+(9, 488, 'Bond Behind Blast', '2023-05-08');
+
+-- Kagurabachi (comic_id = 10)
+INSERT INTO chapter (comic_id, chapter_number, title, release_date) VALUES
+(10, 1, 'The Enchanted Blade', '2023-05-01'),
+(10, 2, 'Inheritance', '2023-05-08'),
+(10, 3, 'The Hunt Begins', '2023-05-15'),
+(10, 29, 'Chapter 29', '2023-06-01'),
+(10, 30, 'Chapter 30', '2023-06-08');
+
+-- Verify chapters and their pages were loaded correctly
+SELECT 
+    c.chapter_id,
+    c.comic_id,
+    co.comic_name,
+    c.chapter_number,
+    c.title,
+    c.release_date,
+    COUNT(cp.page_id) as page_count
+FROM chapter c
+LEFT JOIN comic_db.comic co ON c.comic_id = co.comic_id
+LEFT JOIN chapter_pages cp ON c.chapter_id = cp.chapter_id
+GROUP BY c.chapter_id
+ORDER BY c.comic_id, c.chapter_number; 

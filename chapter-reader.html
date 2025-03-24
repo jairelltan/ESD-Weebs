@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter Reader</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f5f5f5;
+        }
+        .reader-navbar {
+            background-color: #343a40;
+            color: white;
+            padding: 10px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .navbar-title {
+            font-size: 1.2rem;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .page-viewer {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .scrolling-mode .comic-page {
+            max-width: 100%;
+            display: block;
+            margin: 0 auto 10px auto;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        /* Page-by-page mode styles */
+        .page-by-page-mode .page-viewer {
+            height: calc(100vh - 58px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+            padding: 0;
+            background-color: #f0f0f0;
+        }
+        .page-by-page-mode .comic-page {
+            max-height: calc(100vh - 58px);
+            max-width: 100%;
+            display: none;
+            object-fit: contain;
+            transition: transform 0.3s ease;
+            margin: 0 auto;
+        }
+        .page-by-page-mode .comic-page.active {
+            display: block;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .page-navigation-overlay {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            width: 50%;
+            cursor: pointer;
+            z-index: 10;
+        }
+        .page-navigation-overlay.left {
+            left: 0;
+        }
+        .page-navigation-overlay.right {
+            right: 0;
+        }
+        .page-indicator {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: #333;
+            background-color: rgba(255,255,255,0.7);
+            padding: 8px;
+            font-size: 14px;
+            z-index: 5;
+            border-radius: 20px;
+            width: 200px;
+            margin: 0 auto;
+        }
+        .chapter-navigation {
+            position: fixed;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            z-index: 1000;
+        }
+        .loading-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 70vh;
+        }
+        .btn-reading-mode {
+            background-color: rgba(255,255,255,0.9);
+            border-radius: 20px;
+            padding: 5px 15px;
+        }
+        .zoomed {
+            cursor: zoom-out !important;
+        }
+        .zoomable {
+            cursor: zoom-in;
+        }
+        .zoom-controls {
+            background-color: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 4px;
+            padding: 5px 10px;
+        }
+        .zoom-btn {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            background-color: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .zoom-btn:hover {
+            background-color: rgba(255,255,255,0.2);
+        }
+        .zoom-slider-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .zoom-level {
+            min-width: 45px;
+            text-align: center;
+            font-size: 14px;
+            color: white;
+        }
+        .zoom-slider {
+            width: 100px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <nav class="reader-navbar">
+        <div class="container-fluid">
+            <div class="row align-items-center">
+                <div class="col-auto">
+                    <a href="comics.html" class="btn btn-sm btn-outline-light">
+                        <i class="bi bi-arrow-left"></i> Back to Comics
+                    </a>
+                </div>
+                <div class="col">
+                    <div class="navbar-title" id="chapter-title">Loading chapter...</div>
+                </div>
+                <div class="col-auto">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="zoom-controls">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="zoom-btn" id="zoomOutBtn"><i class="bi bi-dash"></i></div>
+                                <div class="zoom-slider-container">
+                                    <input type="range" class="zoom-slider" id="zoomSlider" min="50" max="300" value="100">
+                                    <span class="zoom-level" id="zoomLevel">100%</span>
+                                </div>
+                                <div class="zoom-btn" id="zoomInBtn"><i class="bi bi-plus"></i></div>
+                                <div class="zoom-btn" id="zoomResetBtn"><i class="bi bi-arrows-angle-contract"></i></div>
+                            </div>
+                        </div>
+                        <div class="btn-group btn-group-sm" role="group" aria-label="Reading mode">
+                            <button type="button" class="btn btn-outline-light active" id="scrollModeBtn" data-mode="scroll">
+                                <i class="bi bi-arrow-down-up"></i> Scroll Mode
+                            </button>
+                            <button type="button" class="btn btn-outline-light" id="pageModeBtn" data-mode="page">
+                                <i class="bi bi-arrow-left-right"></i> Page Mode
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="loading-container" id="loading">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+
+    <div class="page-viewer scrolling-mode" id="pageViewer" style="display: none;">
+        <!-- Pages will be loaded here -->
+    </div>
+
+    <div class="chapter-navigation">
+        <button type="button" class="btn btn-primary shadow" id="prevChapter" disabled>
+            <i class="bi bi-chevron-left"></i> Previous Chapter
+        </button>
+        <button type="button" class="btn btn-primary shadow" id="nextChapter" disabled>
+            Next Chapter <i class="bi bi-chevron-right"></i>
+        </button>
+    </div>
+
+    <script>
+        // Global variables
+        let currentChapterId = null;
+        let currentChapterData = null;
+        let currentReadingMode = 'scroll'; // Default reading mode
+        let currentPageIndex = 0;          // For page-by-page navigation
+        let comicId = null;
+        let currentZoomLevel = 1;          // Track zoom level
+        const ZOOM_INCREMENT = 0.25;       // Zoom step size
+        const MAX_ZOOM = 3;                // Maximum zoom level
+        const MIN_ZOOM = 0.5;              // Minimum zoom level
+
+        // Parse URL parameters
+        function getUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const chapterId = urlParams.get('chapter_id');
+            const chapterNumber = urlParams.get('chapter_number');
+            const title = urlParams.get('title');
+            comicId = urlParams.get('comic_id');
+            
+            return { chapterId, chapterNumber, title };
+        }
+
+        // Load chapter based on URL parameters
+        async function loadChapter() {
+            const { chapterId, chapterNumber, title } = getUrlParams();
+            if (!chapterId) {
+                alert('No chapter ID provided!');
+                window.location.href = 'comics.html';
+                return;
+            }
+
+            currentChapterId = chapterId;
+            
+            // Update title
+            document.title = `Chapter ${chapterNumber}${title ? ': ' + title : ''}`;
+            document.getElementById('chapter-title').textContent = `Chapter ${chapterNumber}${title ? ': ' + title : ''}`;
+            
+            try {
+                // Show loading indicator
+                document.getElementById('loading').style.display = 'flex';
+                document.getElementById('pageViewer').style.display = 'none';
+                
+                // Fetch chapter pages
+                const pagesResponse = await fetch(`http://localhost:5005/api/chapters/${chapterId}/pages`);
+                
+                if (!pagesResponse.ok) {
+                    throw new Error(`HTTP error! status: ${pagesResponse.status}`);
+                }
+                
+                currentChapterData = await pagesResponse.json();
+                console.log('Chapter pages data:', currentChapterData);
+                
+                // Display pages
+                displayPages(currentChapterData);
+                
+                // Fetch navigation info (previous and next chapters)
+                const navResponse = await fetch(`http://localhost:5005/api/chapters/${chapterId}/navigation`);
+                
+                if (navResponse.ok) {
+                    const navData = await navResponse.json();
+                    console.log('Navigation data:', navData);
+                    
+                    // Enable/disable navigation buttons
+                    const prevBtn = document.getElementById('prevChapter');
+                    const nextBtn = document.getElementById('nextChapter');
+                    
+                    if (navData.previous_chapter) {
+                        prevBtn.disabled = false;
+                        prevBtn.onclick = () => navigateToChapter(
+                            navData.previous_chapter.chapter_id, 
+                            navData.previous_chapter.chapter_number, 
+                            navData.previous_chapter.title || ''
+                        );
+                    } else {
+                        prevBtn.disabled = true;
+                    }
+                    
+                    if (navData.next_chapter) {
+                        nextBtn.disabled = false;
+                        nextBtn.onclick = () => navigateToChapter(
+                            navData.next_chapter.chapter_id, 
+                            navData.next_chapter.chapter_number, 
+                            navData.next_chapter.title || ''
+                        );
+                    } else {
+                        nextBtn.disabled = true;
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching chapter pages:', error);
+                document.getElementById('pageViewer').innerHTML = `
+                    <div class="alert alert-danger" role="alert">
+                        Error loading chapter pages. Please make sure the chapter service is running.
+                        <br>
+                        Error details: ${error.message}
+                    </div>
+                `;
+                document.getElementById('pageViewer').style.display = 'block';
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        // Navigate to another chapter
+        function navigateToChapter(chapterId, chapterNumber, title) {
+            window.location.href = `chapter-reader.html?chapter_id=${chapterId}&chapter_number=${chapterNumber}&title=${encodeURIComponent(title)}&comic_id=${comicId}`;
+        }
+
+        // Display chapter pages
+        function displayPages(chapterData) {
+            const pageViewer = document.getElementById('pageViewer');
+            
+            if (!chapterData.pages || chapterData.pages.length === 0) {
+                pageViewer.innerHTML = `
+                    <div class="alert alert-info" role="alert">
+                        No pages available for this chapter.
+                    </div>
+                `;
+                pageViewer.style.display = 'block';
+                return;
+            }
+            
+            // Reset page index and zoom level
+            currentPageIndex = 0;
+            currentZoomLevel = 1;
+            
+            // Create image elements for each page
+            const pageElements = chapterData.pages.map((pageNumber, index) => `
+                <img 
+                    src="http://localhost:5005/api/chapters/${chapterData.chapter_id}/pages/${pageNumber}" 
+                    class="comic-page ${index === 0 ? 'active' : ''} zoomable" 
+                    alt="Page ${pageNumber}"
+                    data-page-number="${pageNumber}"
+                    data-page-index="${index}"
+                    loading="lazy"
+                    onerror="this.onerror=null; this.src='images/page-error.png'; console.error('Error loading page ${pageNumber}');"
+                >
+            `).join('');
+            
+            // Add navigation overlays for page-by-page mode
+            const pageByPageNavigation = `
+                <div class="page-navigation-overlay left" id="prevPageOverlay"></div>
+                <div class="page-navigation-overlay right" id="nextPageOverlay"></div>
+                <div class="page-indicator" id="pageIndicator">Page 1 of ${chapterData.pages.length}</div>
+            `;
+            
+            pageViewer.innerHTML = pageElements + pageByPageNavigation;
+            pageViewer.style.display = 'block';
+            
+            // Apply current reading mode
+            applyReadingMode(currentReadingMode);
+            
+            // Set up page navigation events for overlay navigation
+            document.getElementById('prevPageOverlay').addEventListener('click', navigateToPrevPage);
+            document.getElementById('nextPageOverlay').addEventListener('click', navigateToNextPage);
+            
+            // Set up click-to-zoom on pages
+            document.querySelectorAll('.comic-page').forEach(page => {
+                page.addEventListener('click', toggleZoom);
+            });
+        }
+        
+        // Apply reading mode
+        function applyReadingMode(mode) {
+            const pageViewer = document.getElementById('pageViewer');
+            const pageIndicator = document.getElementById('pageIndicator');
+            
+            // Reset zoom level when changing modes
+            resetZoom();
+            
+            // Update UI for active button
+            document.getElementById('scrollModeBtn').classList.toggle('active', mode === 'scroll');
+            document.getElementById('pageModeBtn').classList.toggle('active', mode === 'page');
+            
+            // Apply mode-specific styles
+            if (mode === 'page') {
+                pageViewer.classList.remove('scrolling-mode');
+                pageViewer.classList.add('page-by-page-mode');
+                
+                // Show only the current page
+                document.querySelectorAll('.comic-page').forEach((page, index) => {
+                    page.classList.toggle('active', index === currentPageIndex);
+                });
+                
+                // Show page indicator and overlays
+                if (pageIndicator) {
+                    updatePageIndicator();
+                    pageIndicator.style.display = 'block';
+                }
+                
+                document.querySelectorAll('.page-navigation-overlay').forEach(overlay => {
+                    overlay.style.display = 'block';
+                });
+            } else {
+                pageViewer.classList.add('scrolling-mode');
+                pageViewer.classList.remove('page-by-page-mode');
+                
+                // Show all pages for scrolling
+                document.querySelectorAll('.comic-page').forEach(page => {
+                    page.classList.add('active');
+                    // Remove any zoom in scroll mode
+                    page.classList.remove('zoomed');
+                    page.style.transform = '';
+                });
+                
+                // Hide page indicator and overlays
+                if (pageIndicator) {
+                    pageIndicator.style.display = 'none';
+                }
+                
+                document.querySelectorAll('.page-navigation-overlay').forEach(overlay => {
+                    overlay.style.display = 'none';
+                });
+            }
+            
+            // Save current mode
+            currentReadingMode = mode;
+        }
+        
+        // Navigate to the previous page
+        function navigateToPrevPage() {
+            if (currentReadingMode !== 'page') return;
+            
+            const pages = document.querySelectorAll('.comic-page');
+            if (currentPageIndex > 0) {
+                // Deactivate current page
+                pages[currentPageIndex].classList.remove('active');
+                // Reset any zoom on the current page
+                pages[currentPageIndex].style.transform = '';
+                
+                // Go to previous page
+                currentPageIndex--;
+                
+                // Activate new current page
+                pages[currentPageIndex].classList.add('active');
+                // Apply appropriate transform for centering
+                pages[currentPageIndex].style.transform = 'translate(-50%, -50%)';
+                
+                // Update page indicator
+                updatePageIndicator();
+                
+                // Reset zoom level
+                currentZoomLevel = 1;
+            }
+        }
+        
+        // Navigate to the next page
+        function navigateToNextPage() {
+            if (currentReadingMode !== 'page') return;
+            
+            const pages = document.querySelectorAll('.comic-page');
+            if (currentPageIndex < pages.length - 1) {
+                // Deactivate current page
+                pages[currentPageIndex].classList.remove('active');
+                // Reset any zoom on the current page
+                pages[currentPageIndex].style.transform = '';
+                
+                // Go to next page
+                currentPageIndex++;
+                
+                // Activate new current page
+                pages[currentPageIndex].classList.add('active');
+                // Apply appropriate transform for centering
+                pages[currentPageIndex].style.transform = 'translate(-50%, -50%)';
+                
+                // Update page indicator
+                updatePageIndicator();
+                
+                // Reset zoom level
+                currentZoomLevel = 1;
+            }
+        }
+        
+        // Update page indicator
+        function updatePageIndicator() {
+            const pages = document.querySelectorAll('.comic-page');
+            const indicator = document.getElementById('pageIndicator');
+            if (indicator) {
+                indicator.textContent = `Page ${currentPageIndex + 1} of ${pages.length}`;
+            }
+        }
+        
+        // Handle keyboard navigation
+        function handleKeyNavigation(event) {
+            // Skip if not in page-by-page mode
+            if (currentReadingMode !== 'page') return;
+            
+            switch(event.key) {
+                case 'ArrowLeft':
+                    navigateToPrevPage();
+                    event.preventDefault();
+                    break;
+                case 'ArrowRight':
+                    navigateToNextPage();
+                    event.preventDefault();
+                    break;
+                case '+':
+                case '=':
+                    zoomIn();
+                    event.preventDefault();
+                    break;
+                case '-':
+                    zoomOut();
+                    event.preventDefault();
+                    break;
+                case '0':
+                    resetZoom();
+                    event.preventDefault();
+                    break;
+            }
+        }
+        
+        // Toggle zoom on image click
+        function toggleZoom(event) {
+            if (currentReadingMode !== 'page') return;
+            
+            const image = event.currentTarget;
+            
+            if (image.classList.contains('zoomed')) {
+                // Reset zoom if already zoomed
+                resetZoom();
+            } else {
+                // Zoom in
+                image.classList.add('zoomed');
+                currentZoomLevel = 1.5;
+                applyZoom();
+            }
+        }
+        
+        // Function to apply zoom based on slider value
+        function updateZoomFromSlider(event) {
+            const value = parseFloat(event.target.value);
+            currentZoomLevel = value / 100;
+            document.getElementById('zoomLevel').textContent = `${value}%`;
+            applyZoom();
+        }
+        
+        // Function to zoom in
+        function zoomIn() {
+            if (currentZoomLevel < MAX_ZOOM) {
+                currentZoomLevel = Math.min(MAX_ZOOM, currentZoomLevel + ZOOM_INCREMENT);
+                updateZoomUI();
+                applyZoom();
+            }
+        }
+        
+        // Function to zoom out
+        function zoomOut() {
+            if (currentZoomLevel > MIN_ZOOM) {
+                currentZoomLevel = Math.max(MIN_ZOOM, currentZoomLevel - ZOOM_INCREMENT);
+                updateZoomUI();
+                applyZoom();
+            }
+        }
+        
+        // Function to reset zoom
+        function resetZoom() {
+            currentZoomLevel = 1;
+            updateZoomUI();
+            
+            // Remove zoomed class and reset transform
+            document.querySelectorAll('.comic-page').forEach(page => {
+                page.classList.remove('zoomed');
+                page.classList.add('zoomable');
+                if (currentReadingMode === 'page') {
+                    page.style.transform = 'translate(-50%, -50%)';
+                } else {
+                    page.style.transform = 'scale(1)';
+                }
+            });
+        }
+        
+        // Function to update zoom UI elements
+        function updateZoomUI() {
+            const slider = document.getElementById('zoomSlider');
+            const label = document.getElementById('zoomLevel');
+            
+            slider.value = Math.round(currentZoomLevel * 100);
+            label.textContent = `${Math.round(currentZoomLevel * 100)}%`;
+        }
+        
+        // Function to apply current zoom level
+        function applyZoom() {
+            if (currentReadingMode === 'page') {
+                const activePage = document.querySelector('.comic-page.active');
+                if (activePage) {
+                    if (currentZoomLevel === 1) {
+                        activePage.style.transform = 'translate(-50%, -50%)';
+                    } else {
+                        activePage.style.transform = `translate(-50%, -50%) scale(${currentZoomLevel})`;
+                    }
+                }
+            } else {
+                document.querySelectorAll('.comic-page').forEach(page => {
+                    page.style.transform = `scale(${currentZoomLevel})`;
+                    page.style.transformOrigin = 'top center';
+                });
+            }
+            
+            // Update cursor based on zoom level
+            document.querySelectorAll('.comic-page').forEach(page => {
+                if (currentZoomLevel > 1) {
+                    page.classList.add('zoomed');
+                    page.classList.remove('zoomable');
+                } else {
+                    page.classList.remove('zoomed');
+                    page.classList.add('zoomable');
+                }
+            });
+        }
+        
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set up reading mode toggle buttons
+            document.getElementById('scrollModeBtn').addEventListener('click', function() {
+                applyReadingMode('scroll');
+            });
+            
+            document.getElementById('pageModeBtn').addEventListener('click', function() {
+                applyReadingMode('page');
+            });
+            
+            // Set up keyboard navigation
+            document.addEventListener('keydown', handleKeyNavigation);
+            
+            // Set up zoom control buttons
+            document.getElementById('zoomInBtn').addEventListener('click', zoomIn);
+            document.getElementById('zoomOutBtn').addEventListener('click', zoomOut);
+            document.getElementById('zoomResetBtn').addEventListener('click', resetZoom);
+            
+            // Set up zoom control events
+            document.getElementById('zoomSlider').addEventListener('input', updateZoomFromSlider);
+            
+            // Load chapter
+            loadChapter();
+        });
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 
