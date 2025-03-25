@@ -180,7 +180,7 @@
                     console.log(`${product.comic_name} - Volume ${product.volume_name} - ${this.users.name} of id ${this.users.id} clicked on Add to Cart!`);
                 
                     // Construct URL with the user_id and product_id
-                    const url = `http://localhost:5002/composite/${this.users.id}/${product.Id}`;
+                    const url = `http://localhost:5009/addtocart/${this.users.id}/${product.Id}`;
 
                     // Send a GET request to the backend
                     fetch(url, {
@@ -192,8 +192,8 @@
                             console.log('Received data:', data);
                         })
                         .catch(error => {
-                            console.error('Error adding to waitlist:', error);
-                            alert('Error adding to waitlist. Please try again.');
+                            console.error('Error adding to cart:', error);
+                            alert('Error adding to cart. Please try again.');
                         });
                 },
 
