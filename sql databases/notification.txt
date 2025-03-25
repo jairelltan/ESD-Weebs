@@ -1,0 +1,18 @@
+-- Create the database
+CREATE DATABASE notification;
+
+-- Use the database
+USE notification;
+
+-- Create the notification table
+CREATE TABLE notification (
+    notification_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    description VARCHAR(255) NOT NULL,
+    time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insert sample data
+INSERT INTO notification (user_id, description) VALUES
+(1, 'Payment received successfully! You are now subscribed to Monthly Premium Plan.'),
+(2, 'Payment received successfully! You are now subscribed to Yearly Premium Plan.'); 
