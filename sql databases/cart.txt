@@ -9,6 +9,6 @@ CREATE TABLE cart (
     comic_name VARCHAR(255) NOT NULL,
     comic_volume VARCHAR(255) NOT NULL,
     price_per_item DECIMAL(10,2) NOT NULL,
-    quantity INT NOT NULL,
+    quantity INT NOT NULL
 );
 
