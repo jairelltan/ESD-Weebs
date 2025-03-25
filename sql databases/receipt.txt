@@ -1,0 +1,25 @@
+-- Create the database
+CREATE DATABASE receipt;
+
+-- Use the database
+USE receipt;
+
+-- Create the receipt table
+CREATE TABLE receipt (
+    receipt_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    transaction_id VARCHAR(255) NOT NULL,  -- Stripe transaction ID
+    card_id INT NOT NULL,
+    current_points INT NOT NULL,
+    payment_method ENUM('CREDIT_CARD', 'DEBIT_CARD') NOT NULL,
+    receipt_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    subscriber_status ENUM('active', 'inactive') NOT NULL,
+    billing_address TEXT NOT NULL,
+    GST_amount DECIMAL(10,2) NOT NULL,
+    total_amount DECIMAL(10,2) NOT NULL
+);
+
+-- Insert sample data
+INSERT INTO receipt (user_id, transaction_id, card_id, current_points, payment_method, subscriber_status, billing_address, GST_amount, total_amount) VALUES
+(1, 'pi_3NpKq2EZgVyuuU0m1kTYPn1X', 1, 0, 'CREDIT_CARD', 'active', '123 Main St, Singapore 123456', 0.70, 10.69),
+(2, 'pi_4MpLr3FZhWyvvV1n2lUZQm2Y', 2, 50, 'DEBIT_CARD', 'active', '456 Oak Ave, Singapore 567890', 1.75, 26.74); 
