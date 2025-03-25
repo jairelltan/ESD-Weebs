@@ -1,7 +1,7 @@
-CREATE DATABASE waitlist_db;  -- Create database (if not exists)
-USE waitlist_db;              -- Select the database
+CREATE DATABASE cart_db;  -- Create database (if not exists)
+USE cart_db;              -- Select the database
 
-CREATE TABLE waitlist (
+CREATE TABLE cart (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     username VARCHAR(255) NOT NULL,
@@ -9,6 +9,6 @@ CREATE TABLE waitlist (
     comic_name VARCHAR(255) NOT NULL,
     comic_volume VARCHAR(255) NOT NULL,
     price_per_item DECIMAL(10,2) NOT NULL,
-    timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    quantity INT NOT NULL,
 );
 
