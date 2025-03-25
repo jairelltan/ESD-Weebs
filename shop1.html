@@ -96,6 +96,38 @@
             </div>
         </div>
 
+        <div class="modal fade" id="cartModal" tabindex="-1" aria-labelledby="cartModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="cartModalLabel">Your Cart</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div v-if="cartItems.length > 0">
+                            <ul class="list-group">
+                                <li class="list-group-item" v-for="item in cartItems" :key="item.id">
+                                    <div class="d-flex justify-content-between">
+                                        <span>{{ item.comic_name }} - Volume {{ item.comic_volume }}</span>
+                                        <p>Quantity: {{ item.quantity }}</p>
+                                        <p>Price: {{ item.price_per_item }}</p>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                        <div v-else>
+                            <p>Your cart is empty.</p>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary">Proceed to Checkout</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
         <!-- Stock Update Form (For Demo Purposes)-->
         <div class="container mt-5">
             <h2 v-if="selectedProduct">Update Stock for {{ selectedProduct.comic_name }} - Volume {{
@@ -127,7 +159,8 @@
                     loading: true, // Set loading state to true initially
                     selectedProduct: null, // Store selected product for stock update
                     newStock: 0, // New stock value for the form
-                    users: {}
+                    users: {},
+                    cartItems: [] 
                 };
             },
             mounted() {
@@ -178,8 +211,7 @@
                 // Add product to cart
                 addToCart(product) {
                     console.log(`${product.comic_name} - Volume ${product.volume_name} - ${this.users.name} of id ${this.users.id} clicked on Add to Cart!`);
-                
-                    // Construct URL with the user_id and product_id
+
                     const url = `http://localhost:5009/addtocart/${this.users.id}/${product.Id}`;
 
                     // Send a GET request to the backend
@@ -196,8 +228,6 @@
                             alert('Error adding to cart. Please try again.');
                         });
                 },
-
-
 
                 addToWaitlist(product) {
                     console.log(`${product.comic_name} - Volume ${product.volume_name} - ${this.users.name} id ${this.users.id} clicked on Join Waitlist!`);
@@ -219,7 +249,24 @@
                             alert('Error adding to waitlist. Please try again.');
                         });
                 },
-                
+
+                toggleCartModal() {
+                    this.fetchCartItems();
+                    const cartModal = new bootstrap.Modal(document.getElementById('cartModal'));
+                    cartModal.show();
+                },
+
+                fetchCartItems() {
+                    fetch(`http://localhost:5008/cart/${this.users.id}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            this.cartItems = data;
+                        })
+                        .catch(error => {
+                            console.error('Error fetching cart items:', error);
+                        });
+                },
+
                 // Update stock using the API (FOR DEMO)
                 updateStock() {
                     const updatedProduct = {

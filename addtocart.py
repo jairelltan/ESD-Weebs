@@ -11,6 +11,9 @@ USER_SERVICE_URL = "http://127.0.0.1:5000/user"
 # Inventory Microservice Base URL
 INVENTORY_SERVICE_URL = "https://personal-dwnxuxog.outsystemscloud.com/InventoryAtomicMicroservice/rest/RESTAPI/GetProductbyID"
 
+# Inventory Microservice Patch URL (The Minus One)
+REDUCE_STOCK_URL = "https://personal-dwnxuxog.outsystemscloud.com/InventoryAtomicMicroservice/rest/RESTAPI/ReduceStock/{InputID}"
+
 # Cart Microservice Base URL
 CART_SERVICE_URL = "http://127.0.0.1:5008/cart"
 
@@ -47,13 +50,23 @@ def get_composite_data(user_id, product_id):
         "quantity": 1
     }
 
-    print(composite_data)
 
     # Send the composite data to the cart service to add/update it
     cart_response = requests.post(CART_SERVICE_URL, json=composite_data)
     if cart_response.status_code != 200:
         return jsonify({"error": "Failed to update cart"}), cart_response.status_code
 
+    #if the cart is updated, then proceed
+    product_id_to_reduce = product.get("Id")
+
+    reduce_stock_url = REDUCE_STOCK_URL.format(InputID=product_id_to_reduce)
+
+    # Send PATCH request to reduce the stock (no quantity needed here)
+    patch_response = requests.patch(reduce_stock_url)
+
+    if patch_response.status_code != 200:
+        return jsonify({"error": "Failed to reduce stock"}), patch_response.status_code
+        
     # Return the updated cart data or success confirmation
     cart_data = cart_response.json()
     return jsonify({"message": "Item added/updated in cart", "cart_data": cart_data})
