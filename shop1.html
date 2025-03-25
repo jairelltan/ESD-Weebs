@@ -87,9 +87,10 @@
 
                             <!-- Button Text based on stock availability -->
                             <button class="btn btn-primary"
-                                @click="product.quantity_in_stock > 0 ? addToCart(product) : addToWaitlist(product)">
-                                {{ product.quantity_in_stock > 0 ? 'Purchase' : 'Join Waitlist' }}
-                            </button>
+                            :disabled="product.isCooldown"
+                            @click="product.quantity_in_stock > 0 ? addToCart(product) : addToWaitlist(product)">
+                            {{ product.quantity_in_stock > 0 ? 'Purchase' : 'Join Waitlist' }}
+                        </button>                        
                         </div>
                     </div>
                 </div>
@@ -160,7 +161,7 @@
                     selectedProduct: null, // Store selected product for stock update
                     newStock: 0, // New stock value for the form
                     users: {},
-                    cartItems: [] 
+                    cartItems: []
                 };
             },
             mounted() {
@@ -177,7 +178,7 @@
                     });
 
                 // User
-                fetch('http://localhost:5000/user/1')
+                fetch('http://localhost:5000/user/2')
                     .then(response => response.json())
                     .then(data => {
                         if (data) {
@@ -210,18 +211,30 @@
 
                 // Add product to cart
                 addToCart(product) {
+
                     console.log(`${product.comic_name} - Volume ${product.volume_name} - ${this.users.name} of id ${this.users.id} clicked on Add to Cart!`);
 
                     const url = `http://localhost:5009/addtocart/${this.users.id}/${product.Id}`;
 
+                    // I dont want them to spam
+                    product.isCooldown = true;
+                    setTimeout(() => {
+                        product.isCooldown = false;
+                    }, 1500);
+
                     // Send a GET request to the backend
-                    fetch(url, {
-                        method: 'GET',
-                    })
+                    fetch(url, { method: 'GET' })
                         .then(response => response.json())
                         .then(data => {
-                            // Just log the obtained JSON data to the console
                             console.log('Received data:', data);
+
+                            // Reduce stock immediately to prevent spam clicks
+                            product.quantity_in_stock--;
+
+                            // Disable the button if stock is depleted
+                            if (product.quantity_in_stock <= 0) {
+                                product.outOfStock = true; // Flag to disable the button
+                            }
                         })
                         .catch(error => {
                             console.error('Error adding to cart:', error);
@@ -229,19 +242,24 @@
                         });
                 },
 
+
                 addToWaitlist(product) {
+                    if (product.isCooldown) return;
+
+                    product.isCooldown = true;
+                    setTimeout(() => {
+                        product.isCooldown = false;
+                    }, 1500);
+
                     console.log(`${product.comic_name} - Volume ${product.volume_name} - ${this.users.name} id ${this.users.id} clicked on Join Waitlist!`);
 
-                    // Construct URL with the user_id and product_id
                     const url = `http://localhost:5002/addtowishlist/${this.users.id}/${product.Id}`;
 
-                    // Send a GET request to the backend
                     fetch(url, {
                         method: 'GET',
                     })
                         .then(response => response.json())
                         .then(data => {
-                            // Just log the obtained JSON data to the console
                             console.log('Received data:', data);
                         })
                         .catch(error => {
