@@ -121,7 +121,7 @@ def update_points(user_id):
     # SQL query to update the points of the user
     update_query = """
         UPDATE user
-        SET quantity = %s
+        SET points = %s
         WHERE user_id = %s
     """
 

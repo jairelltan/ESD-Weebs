@@ -44,12 +44,12 @@ def get_users():
     
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM waitlist")
-    users = cursor.fetchall()
+    waitlistentries = cursor.fetchall()
     
     # Convert the tuple data into a dictionary with appropriate keys
-    users_list = []
-    for user in users:
-        users_list.append({
+    waitlist_list = []
+    for waitlist_entry in waitlistentries:
+        waitlist_list.append({
             "id": user[0],
             "name": user[1],
             "phone": user[2],
@@ -62,7 +62,7 @@ def get_users():
     cursor.close()
     conn.close()
     
-    return jsonify(users_list)
+    return jsonify(waitlist_list)
 
 
 if __name__ == '__main__':
