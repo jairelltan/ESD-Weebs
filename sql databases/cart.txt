@@ -1,0 +1,14 @@
+CREATE DATABASE waitlist_db;  -- Create database (if not exists)
+USE waitlist_db;              -- Select the database
+
+CREATE TABLE waitlist (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    username VARCHAR(255) NOT NULL,
+    comic_id INT NOT NULL,
+    comic_name VARCHAR(255) NOT NULL,
+    comic_volume VARCHAR(255) NOT NULL,
+    price_per_item DECIMAL(10,2) NOT NULL,
+    timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+

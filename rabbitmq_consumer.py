@@ -2,6 +2,7 @@ import pika
 import json
 import mysql.connector
 from mysql.connector import Error
+import requests
 
 # Function to connect to RabbitMQ
 def connect_to_rabbitmq():
@@ -11,51 +12,21 @@ def connect_to_rabbitmq():
     return connection, channel
 
 # Function to insert data into MySQL database
-def insert_data_to_mysql(data):
+def send_to_waitlist_service(data):
+    url = "http://localhost:5003/waitlist"
+    headers = {'Content-Type': 'application/json'}
+    
     try:
-        # Establish MySQL connection
-        connection = mysql.connector.connect(
-            host='localhost',  # Change to your MySQL host if necessary
-            user='root',       # Change to your MySQL username
-            password='',  # Change to your MySQL password
-            database='waitlist_db'  # Replace with your actual database name
-        )
-        
-        if connection.is_connected():
-            cursor = connection.cursor()
-            
-            # Define your SQL insert statement
-            insert_query = """
-            INSERT INTO waitlist (user_id, username, comic_id, comic_name, comic_volume, price_per_item, timestamp)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """
-            
-            # Extract values from the received data
-            values = (
-                data['user_id'],
-                data['username'],
-                data['comic_id'],
-                data['comic_name'],
-                data['comic_volume'],
-                data['price_per_item'],
-                data['timestamp']
-            )
-            
-            # Execute the insert query
-            cursor.execute(insert_query, values)
-            
-            # Commit the changes to the database
-            connection.commit()
-            print("Data inserted into MySQL successfully!")
-    
-    except Error as e:
-        print(f"Error while connecting to MySQL: {e}")
-    
-    finally:
-        # Close the cursor and connection
-        if connection.is_connected():
-            cursor.close()
-            connection.close()
+        response = requests.post(url, json=data, headers=headers)
+        if response.status_code == 201:
+            print("Data successfully added to the waitlist service!")
+            return True
+        else:
+            print(f"Failed to add data: {response.text}")
+            return False
+    except requests.exceptions.RequestException as e:
+        print(f"Error connecting to waitlist service: {e}")
+        return False
 
 # Function to process messages from RabbitMQ and insert into MySQL
 def process_message(ch, method, properties, body):
@@ -63,7 +34,7 @@ def process_message(ch, method, properties, body):
     print(f" [x] Processing data: {data}")  # Log the received data
     
     # Insert data into MySQL
-    insert_data_to_mysql(data)
+    send_to_waitlist_service(data)
     
     # Acknowledge the message after processing
     ch.basic_ack(delivery_tag=method.delivery_tag)
