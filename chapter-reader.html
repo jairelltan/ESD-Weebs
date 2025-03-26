@@ -380,6 +380,22 @@
                 document.getElementById('threadContainer').style.display = 'none';
                 document.getElementById('toggleThreadsBtn').classList.remove('active');
                 
+                // Verify chapter access first
+                const userId = 1; // Should be fetched from user session
+                const verifyResponse = await fetch(`http://localhost:5015/verify/chapter/${chapterId}/user/${userId}`);
+                
+                if (verifyResponse.ok) {
+                    const verifyData = await verifyResponse.json();
+                    
+                    // If chapter is not accessible, redirect to comics page
+                    if (!verifyData.is_accessible) {
+                        document.getElementById('loading').style.display = 'none';
+                        alert('You need to read previous chapters first to unlock this chapter.');
+                        window.location.href = 'comics.html';
+                        return;
+                    }
+                }
+                
                 // Get chapter details from chapter service
                 const chapterResponse = await fetch(`http://localhost:5005/api/chapters/${chapterId}`);
                 
@@ -465,7 +481,50 @@
 
         // Navigate to another chapter
         function navigateToChapter(chapterId, chapterNumber, title) {
-            window.location.href = `chapter-reader.html?chapter_id=${chapterId}&chapter_number=${chapterNumber}&title=${encodeURIComponent(title)}&comic_id=${comicId}`;
+            // Before navigating, check if the target chapter is locked
+            validateChapterAccess(chapterId, function(isAccessible) {
+                if (!isAccessible) {
+                    // Show error message if chapter is locked
+                    alert('You need to read previous chapters first to unlock this chapter.');
+                    return;
+                }
+                
+                // Navigate to chapter if unlocked
+                window.location.href = `chapter-reader.html?chapter_id=${chapterId}&chapter_number=${chapterNumber}&title=${encodeURIComponent(title)}&comic_id=${comicId}`;
+            });
+        }
+        
+        // Function to validate chapter access using verify_history service
+        function validateChapterAccess(chapterId, callback) {
+            // Default user ID (could be fetched from localStorage in a real app)
+            const userId = 1;
+            
+            // Call the more efficient single chapter verification endpoint
+            fetch(`http://localhost:5015/verify/chapter/${chapterId}/user/${userId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        console.error('Failed to verify chapter access', response.status);
+                        // If service fails, we allow access to prevent blocking the user
+                        callback(true);
+                        return;
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (!data) {
+                        console.error('Invalid response from verify service', data);
+                        callback(true);
+                        return;
+                    }
+                    
+                    // Check if the chapter is accessible
+                    callback(data.is_accessible);
+                })
+                .catch(error => {
+                    console.error('Error validating chapter access:', error);
+                    // If validation fails, we allow access to prevent blocking the user
+                    callback(true);
+                });
         }
 
         // Function to preload nearby pages
@@ -682,11 +741,6 @@
             if (currentPageIndex > 0) {
                 // Deactivate current page
                 pages[currentPageIndex].classList.remove('active');
-                // Reset any transform on the current page
-                pages[currentPageIndex].style.transform = '';
-                pages[currentPageIndex].style.top = '';
-                pages[currentPageIndex].style.left = '';
-                pages[currentPageIndex].style.transformOrigin = '';
                 
                 // Go to previous page
                 currentPageIndex--;
@@ -694,21 +748,8 @@
                 // Activate new current page
                 pages[currentPageIndex].classList.add('active');
                 
-                // Apply zoom based on current zoom level
-                if (currentZoomLevel === 1) {
-                    // Center the image at normal zoom
-                    pages[currentPageIndex].style.top = '50%';
-                    pages[currentPageIndex].style.left = '50%';
-                    pages[currentPageIndex].style.transform = 'translate(-50%, -50%)';
-                    pages[currentPageIndex].style.transformOrigin = 'center';
-                } else {
-                    // Apply zoom with top visibility preservation
-                    const topOffset = Math.max(10, 50 - (currentZoomLevel - 1) * 40);
-                    pages[currentPageIndex].style.transformOrigin = 'top center';
-                    pages[currentPageIndex].style.top = `${topOffset}%`;
-                    pages[currentPageIndex].style.left = '50%';
-                    pages[currentPageIndex].style.transform = `translate(-50%, 0) scale(${currentZoomLevel})`;
-                }
+                // Apply current zoom level to new page
+                applyZoom();
                 
                 // Update page indicator
                 updatePageIndicator();
@@ -726,11 +767,6 @@
             if (currentPageIndex < pages.length - 1) {
                 // Deactivate current page
                 pages[currentPageIndex].classList.remove('active');
-                // Reset any transform on the current page
-                pages[currentPageIndex].style.transform = '';
-                pages[currentPageIndex].style.top = '';
-                pages[currentPageIndex].style.left = '';
-                pages[currentPageIndex].style.transformOrigin = '';
                 
                 // Go to next page
                 currentPageIndex++;
@@ -738,21 +774,8 @@
                 // Activate new current page
                 pages[currentPageIndex].classList.add('active');
                 
-                // Apply zoom based on current zoom level
-                if (currentZoomLevel === 1) {
-                    // Center the image at normal zoom
-                    pages[currentPageIndex].style.top = '50%';
-                    pages[currentPageIndex].style.left = '50%';
-                    pages[currentPageIndex].style.transform = 'translate(-50%, -50%)';
-                    pages[currentPageIndex].style.transformOrigin = 'center';
-                } else {
-                    // Apply zoom with top visibility preservation
-                    const topOffset = Math.max(10, 50 - (currentZoomLevel - 1) * 40);
-                    pages[currentPageIndex].style.transformOrigin = 'top center';
-                    pages[currentPageIndex].style.top = `${topOffset}%`;
-                    pages[currentPageIndex].style.left = '50%';
-                    pages[currentPageIndex].style.transform = `translate(-50%, 0) scale(${currentZoomLevel})`;
-                }
+                // Apply current zoom level to new page
+                applyZoom();
                 
                 // Update page indicator
                 updatePageIndicator();
@@ -857,10 +880,10 @@
                 if (currentReadingMode === 'page') {
                     // Only apply to the active page in page mode
                     if (page.classList.contains('active')) {
-                        page.style.transform = 'translate(-50%, -50%)';
+                        page.style.transformOrigin = 'center center';
                         page.style.top = '50%';
                         page.style.left = '50%';
-                        page.style.transformOrigin = 'center';
+                        page.style.transform = 'translate(-50%, -50%)';
                     } else {
                         // Reset non-active pages completely
                         page.style.transform = '';
@@ -869,11 +892,9 @@
                         page.style.transformOrigin = '';
                     }
                 } else {
-                    // For scroll mode, simple reset for all pages
+                    // For scroll mode, simple reset
                     page.style.transform = '';
-                    page.style.top = '';
-                    page.style.left = '';
-                    page.style.transformOrigin = '';
+                    page.style.transformOrigin = 'top center';
                 }
             });
         }
@@ -892,30 +913,24 @@
             if (currentReadingMode === 'page') {
                 const activePage = document.querySelector('.comic-page.active');
                 if (activePage) {
+                    // Always maintain top-center transform origin and positioning
+                    activePage.style.transformOrigin = 'top center';
+                    activePage.style.top = '10%';  // Fixed top position
+                    activePage.style.left = '50%';
+                    
                     if (currentZoomLevel === 1) {
-                        // At zoom level 1, just center the image
-                        activePage.style.transform = 'translate(-50%, -50%)';
+                        // At normal zoom, center vertically
                         activePage.style.top = '50%';
-                        activePage.style.left = '50%';
-                        activePage.style.transformOrigin = 'center';
+                        activePage.style.transformOrigin = 'center center';
+                        activePage.style.transform = 'translate(-50%, -50%)';
                     } else {
-                        // When zooming, adjust positioning to keep the top visible
-                        // Calculate the top position to prevent cutting off the top
-                        const topOffset = Math.max(10, 50 - (currentZoomLevel - 1) * 40);
-                        
-                        // Change transform origin to prevent top cutoff
-                        activePage.style.transformOrigin = 'top center';
-                        
-                        // Apply transform that scales but prevents top cutoff
-                        activePage.style.top = `${topOffset}%`;
-                        activePage.style.left = '50%';
+                        // When zoomed, maintain position from top
                         activePage.style.transform = `translate(-50%, 0) scale(${currentZoomLevel})`;
                     }
                 }
             } else {
                 // For scroll mode, apply zoom to all pages
                 document.querySelectorAll('.comic-page').forEach(page => {
-                    // In scroll mode, we want to zoom from the top center
                     page.style.transformOrigin = 'top center';
                     if (currentZoomLevel === 1) {
                         page.style.transform = '';
