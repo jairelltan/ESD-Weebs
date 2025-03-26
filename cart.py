@@ -62,6 +62,35 @@ def get_cart_items(user_id):
     
     return jsonify(cart_list)
 
+@app.route('/cart/<int:id>/<int:comic_id>', methods=['GET'])
+def get_cart_items(id, comic_id):
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"error": "Failed to connect to database"}), 500
+    
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM cart WHERE id = %s AND comic_id = %s", (id, comic_id))
+    cart_items = cursor.fetchall()
+    
+    cart_list = []
+    for item in cart_items:
+        cart_list.append({
+            "id": item[0],
+            "user_id": item[1],
+            "username": item[2],
+            "comic_id": item[3],
+            "comic_name": item[4],
+            "comic_volume": item[5],
+            "price_per_item": item[6],
+            "quantity": item[7]
+        })
+    
+    cursor.close()
+    conn.close()
+    
+    return jsonify(cart_list)
+
+
 #Add or update cart entry (increase quantity if same user_id and comic_id)
 @app.route('/cart', methods=['POST'])
 def add_or_update_cart_entry():
