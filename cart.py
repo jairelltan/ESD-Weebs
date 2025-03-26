@@ -121,42 +121,5 @@ def delete_cart_entry(id):
     
     return jsonify({"message": "Cart entry deleted successfully"}), 200
 
-#Reduce the quantity of a cart entry based on id
-@app.route('/cart/<int:id>/reduce', methods=['PATCH'])
-def reduce_quantity(id):
-    data = request.get_json()
-    
-    if "quantity" not in data:
-        return jsonify({"error": "Quantity not provided"}), 400
-    
-    quantity_to_reduce = data["quantity"]
-    
-    if quantity_to_reduce <= 0:
-        return jsonify({"error": "Quantity must be greater than zero"}), 400
-    
-    conn = get_db_connection()
-    if conn is None:
-        return jsonify({"error": "Failed to connect to database"}), 500
-    
-    cursor = conn.cursor()
-    cursor.execute("SELECT quantity FROM cart WHERE id = %s", (id,))
-    cart_item = cursor.fetchone()
-    
-    if not cart_item:
-        return jsonify({"error": "Cart entry not found"}), 404
-    
-    new_quantity = cart_item[0] - quantity_to_reduce
-    
-    if new_quantity < 0:
-        return jsonify({"error": "Cannot reduce quantity below zero"}), 400
-    
-    cursor.execute("UPDATE cart SET quantity = %s WHERE id = %s", (new_quantity, id))
-    conn.commit()
-    
-    cursor.close()
-    conn.close()
-    
-    return jsonify({"message": "Quantity reduced successfully"}), 200
-
 if __name__ == '__main__':
     app.run(port=5008, debug=True)
