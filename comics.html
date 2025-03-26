@@ -223,6 +223,61 @@
             align-items: center;
             height: 200px;
         }
+        /* User profile styles */
+        .user-points {
+            background-color: #ffd700;
+            color: #000;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+        }
+        .user-points i {
+            margin-right: 6px;
+            font-size: 1.1em;
+        }
+        .user-points-info {
+            color: #ffd700;
+            font-size: 0.9rem;
+        }
+        .user-points-info i {
+            margin-right: 5px;
+        }
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: #6c757d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        .dropdown-menu {
+            min-width: 200px;
+        }
+        .dropdown-item {
+            padding: 8px 16px;
+        }
+        .dropdown-item i {
+            margin-right: 8px;
+            width: 16px;
+            text-align: center;
+        }
+        .user-info {
+            padding: 8px 16px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .user-name {
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        .user-email {
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -230,6 +285,64 @@
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
             <div class="container">
                 <a class="navbar-brand" href="#">Comic Collection</a>
+                <div class="navbar-nav ms-auto align-items-center">
+                    <!-- User points display -->
+                    <div class="nav-item me-3" v-if="currentUser && currentUser.points !== undefined">
+                        <span class="user-points">
+                            <i class="bi bi-coin"></i> {{ currentUser.points }} Points
+                        </span>
+                    </div>
+                    <!-- Loading indicator -->
+                    <div class="nav-item me-3" v-else>
+                        <span class="text-light">
+                            <i class="bi bi-hourglass-split"></i> Loading...
+                        </span>
+                    </div>
+                    <!-- User profile section -->
+                    <div class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown">
+                            <div class="user-avatar me-2" v-if="currentUser">
+                                {{ currentUser.name ? currentUser.name.charAt(0).toUpperCase() : '' }}
+                            </div>
+                            <div class="user-avatar me-2" v-else>
+                                <i class="bi bi-person"></i>
+                            </div>
+                            {{ currentUser ? currentUser.name : 'Loading...' }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li v-if="currentUser">
+                                <div class="user-info">
+                                    <div class="user-name">{{ currentUser.name }}</div>
+                                    <div class="user-email">{{ currentUser.email }}</div>
+                                    <div class="user-points-info mt-2" v-if="currentUser.points !== undefined">
+                                        <i class="bi bi-coin"></i> <strong>{{ currentUser.points }}</strong> Points
+                                    </div>
+                                </div>
+                            </li>
+                            <li v-else>
+                                <div class="user-info">
+                                    <div class="text-center py-2">
+                                        <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                        <span class="ms-2">Loading user data...</span>
+                                    </div>
+                                </div>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="#">
+                                    <i class="bi bi-bookmark"></i> Reading History
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="#">
+                                    <i class="bi bi-gear"></i> Settings
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </nav>
 
@@ -328,7 +441,33 @@
                 const chapters = ref([]);
                 const loadingChapters = ref(false);
                 const selectedComic = ref(null);
+                const currentUser = ref(null);
                 let comicModal = null;
+
+                // Function to fetch user data
+                async function fetchUserData() {
+                    try {
+                        console.log('Attempting to fetch user data from http://localhost:5000/user/1');
+                        const response = await fetch('http://localhost:5000/user/1');
+                        console.log('Response status:', response.status);
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            console.log('User data received:', data);
+                            currentUser.value = data;  // Remove .user since the API returns user data directly
+                        } else {
+                            console.error('Failed to fetch user data - Status:', response.status);
+                            try {
+                                const errorText = await response.text();
+                                console.error('Error response:', errorText);
+                            } catch (e) {
+                                console.error('Could not read error response');
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error fetching user data:', error);
+                    }
+                }
 
                 // Function to fetch comics from the comic service
                 async function fetchComics() {
@@ -436,8 +575,7 @@
                 // Initialize when the component is mounted
                 onMounted(() => {
                     fetchComics();
-                    
-                    // Initialize modal
+                    fetchUserData(); // Fetch John Doe's data
                     comicModal = new bootstrap.Modal(document.getElementById('comicModal'));
                 });
 
@@ -446,6 +584,7 @@
                     chapters,
                     loadingChapters,
                     selectedComic,
+                    currentUser,
                     getStatusBadgeClass,
                     handleImageError,
                     readComic,

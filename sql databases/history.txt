@@ -1,0 +1,9 @@
+CREATE DATABASE IF NOT EXISTS history_db;
+USE history_db;
+
+CREATE TABLE IF NOT EXISTS reading_history (
+    user_id INT NOT NULL,
+    chapter_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, chapter_id)
+); 

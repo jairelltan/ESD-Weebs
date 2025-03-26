@@ -88,18 +88,32 @@
         }
         .page-indicator {
             position: absolute;
-            bottom: 20px;
+            bottom: 10px;
             left: 0;
             right: 0;
             text-align: center;
             color: #333;
             background-color: rgba(255,255,255,0.7);
-            padding: 8px;
+            padding: 5px;
             font-size: 14px;
             z-index: 5;
+        }
+        .page-tracker {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 8px 16px;
             border-radius: 20px;
-            width: 200px;
-            margin: 0 auto;
+            color: white;
+            font-size: 14px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .page-tracker .badge {
+            font-size: 14px;
+            padding: 6px 12px;
         }
         .chapter-navigation {
             position: fixed;
@@ -258,6 +272,21 @@
         <!-- Pages will be loaded here -->
     </div>
 
+    <div class="chapter-navigation">
+        <button type="button" class="btn btn-primary shadow" id="prevChapter" disabled>
+            <i class="bi bi-chevron-left"></i> Previous Chapter
+        </button>
+        <button type="button" class="btn btn-primary shadow" id="nextChapter" disabled>
+            Next Chapter <i class="bi bi-chevron-right"></i>
+        </button>
+    </div>
+
+    <div class="page-tracker text-center mt-2" style="display: none;" id="pageTracker">
+        <span class="badge bg-primary">
+            Page <span id="currentPageNum">1</span> of <span id="totalPagesNum">0</span>
+        </span>
+    </div>
+
     <div class="container mt-5" id="threadContainer" style="display: none; max-width: 800px;">
         <div class="card mb-5 shadow">
             <div class="card-header bg-primary text-white">
@@ -302,15 +331,6 @@
                 </div>
             </div>
         </div>
-    </div>
-
-    <div class="chapter-navigation">
-        <button type="button" class="btn btn-primary shadow" id="prevChapter" disabled>
-            <i class="bi bi-chevron-left"></i> Previous Chapter
-        </button>
-        <button type="button" class="btn btn-primary shadow" id="nextChapter" disabled>
-            Next Chapter <i class="bi bi-chevron-right"></i>
-        </button>
     </div>
 
     <script>
@@ -1124,6 +1144,33 @@
                 console.error('Error creating thread:', error);
                 alert('Error creating thread. Please try again.');
             }
+        }
+
+        // Function to update page tracker
+        function updatePageTracker(currentIndex, totalPages) {
+            const pageTracker = document.getElementById('pageTracker');
+            const currentPageNum = document.getElementById('currentPageNum');
+            const totalPagesNum = document.getElementById('totalPagesNum');
+            
+            if (pageTracker && currentPageNum && totalPagesNum) {
+                currentPageNum.textContent = currentIndex + 1;
+                totalPagesNum.textContent = totalPages;
+                pageTracker.style.display = 'block';
+            }
+        }
+
+        // Function to show a specific page
+        function showPage(index) {
+            const pageElements = document.querySelectorAll('.comic-page');
+            pageElements.forEach((page, i) => {
+                if (i === index) {
+                    page.classList.add('active');
+                    currentPageIndex = index;
+                    updatePageTracker(index, pageElements.length);
+                } else {
+                    page.classList.remove('active');
+                }
+            });
         }
     </script>
     

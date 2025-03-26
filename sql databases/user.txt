@@ -17,6 +17,6 @@ CREATE TABLE user (
 
 -- Insert sample data into the user table
 INSERT INTO user (user_id, user_name, phone_number, email, address, points, subscriber_status) VALUES
-(1, 'John Doe', 1234567890, 'john@example.com', '123 Main St', 100, 'active'),
+(1, 'John Doe', 1234567890, 'john@example.com', '123 Main St', 1000, 'active'),
 (2, 'Jane Smith', 987654321, 'jane@example.com', '456 Oak Ave', 50, 'inactive');
 
