@@ -43,6 +43,31 @@ def debug():
         "routes": [str(rule) for rule in app.url_map.iter_rules()]
     })
 
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    """Health check endpoint"""
+    conn = get_db_connection()
+    result = {
+        "status": "ok" if conn else "error",
+        "service": "comic-service",
+        "timestamp": datetime.now().isoformat(),
+        "database": "connected" if conn else "error"
+    }
+    
+    if conn:
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SHOW TABLES")
+            tables = [table[0] for table in cursor.fetchall()]
+            result["tables"] = tables
+        except mysql.connector.Error as e:
+            result["error"] = str(e)
+        finally:
+            cursor.close()
+            conn.close()
+    
+    return jsonify(result)
+
 # Route for home page
 @app.route('/')
 def home():
@@ -324,32 +349,41 @@ def update_comic(comic_id):
         conn.close()
         return jsonify({"error": f"Failed to update comic: {err}"}), 500
 
-# Delete a comic
-@app.route('/comic/<int:comic_id>', methods=['DELETE'])
-def delete_comic(comic_id):
-    conn = get_db_connection()
-    if conn is None:
-        return jsonify({"error": "Failed to connect to database"}), 500
+# # Delete a comic
+# @app.route('/comic/<int:comic_id>', methods=['DELETE'])
+# def delete_comic(comic_id):
+#     conn = get_db_connection()
+#     if conn is None:
+#         return jsonify({"error": "Failed to connect to database"}), 500
     
-    cursor = conn.cursor()
+#     cursor = conn.cursor()
     
-    try:
-        cursor.execute("DELETE FROM comic WHERE comic_id = %s", (comic_id,))
-        conn.commit()
+#     try:
+#         cursor.execute("DELETE FROM comic WHERE comic_id = %s", (comic_id,))
+#         conn.commit()
         
-        if cursor.rowcount == 0:
-            cursor.close()
-            conn.close()
-            return jsonify({"error": "Comic not found"}), 404
+#         if cursor.rowcount == 0:
+#             cursor.close()
+#             conn.close()
+#             return jsonify({"error": "Comic not found"}), 404
         
-        cursor.close()
-        conn.close()
-        return jsonify({"message": "Comic deleted successfully"})
+#         cursor.close()
+#         conn.close()
+#         return jsonify({"message": "Comic deleted successfully"})
         
-    except mysql.connector.Error as err:
-        cursor.close()
-        conn.close()
-        return jsonify({"error": f"Failed to delete comic: {err}"}), 500
+#     except mysql.connector.Error as err:
+#         cursor.close()
+#         conn.close()
+#         return jsonify({"error": f"Failed to delete comic: {err}"}), 500
+
+@app.route('/ping', methods=['GET'])
+def ping():
+    """Health check endpoint"""
+    return jsonify({
+        "status": "ok", 
+        "service": "comic-service", 
+        "timestamp": datetime.now().isoformat()
+    })
 
 if __name__ == '__main__':
     print("Starting Comic API server...")

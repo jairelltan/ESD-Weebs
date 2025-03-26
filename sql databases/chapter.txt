@@ -2,10 +2,10 @@
 CREATE DATABASE IF NOT EXISTS chapter_db;
 USE chapter_db;
 
--- Create chapters table
-DROP TABLE IF EXISTS chapter_pages;
+-- Drop existing tables to ensure clean setup
 DROP TABLE IF EXISTS chapter;
 
+-- Create chapters table
 CREATE TABLE IF NOT EXISTS chapter (
     chapter_id INT AUTO_INCREMENT PRIMARY KEY,
     comic_id INT NOT NULL,
@@ -13,17 +13,6 @@ CREATE TABLE IF NOT EXISTS chapter (
     title VARCHAR(255) NOT NULL,
     release_date DATE NOT NULL,
     UNIQUE KEY unique_chapter (comic_id, chapter_number)
-);
-
--- Create chapter pages table to store multiple images per chapter
-CREATE TABLE IF NOT EXISTS chapter_pages (
-    page_id INT AUTO_INCREMENT PRIMARY KEY,
-    comic_id INT NOT NULL,
-    chapter_id INT NOT NULL,
-    page_number INT NOT NULL,
-    page_image LONGBLOB NOT NULL,
-    UNIQUE KEY unique_page (comic_id, chapter_id, page_number),
-    FOREIGN KEY (chapter_id) REFERENCES chapter(chapter_id) ON DELETE CASCADE
 );
 
 -- Insert chapters data

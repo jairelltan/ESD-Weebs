@@ -36,6 +36,11 @@
             margin: 0 auto 10px auto;
             border-radius: 4px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            opacity: 0;
+            transition: opacity 0.3s ease-in;
+        }
+        .scrolling-mode .comic-page.loaded {
+            opacity: 1;
         }
         /* Page-by-page mode styles */
         .page-by-page-mode .page-viewer {
@@ -53,8 +58,9 @@
             max-width: 100%;
             display: none;
             object-fit: contain;
-            transition: transform 0.3s ease;
+            transition: transform 0.3s ease, opacity 0.3s ease;
             margin: 0 auto;
+            opacity: 0;
         }
         .page-by-page-mode .comic-page.active {
             display: block;
@@ -62,6 +68,9 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
+        }
+        .page-by-page-mode .comic-page.loaded {
+            opacity: 1;
         }
         .page-navigation-overlay {
             position: absolute;
@@ -157,6 +166,44 @@
             width: 100px;
             cursor: pointer;
         }
+        
+        /* Thread styles */
+        #threadContainer {
+            padding-top: 20px;
+            padding-bottom: 80px;
+            transition: all 0.3s ease;
+        }
+        #threadContainer .card {
+            border: none;
+        }
+        #threadContainer .card-header {
+            padding: 15px 20px;
+        }
+        #threadContainer .list-group-item {
+            border-left: none;
+            border-right: none;
+            padding: 15px;
+            transition: background-color 0.2s;
+        }
+        #threadContainer .list-group-item:first-child {
+            border-top: none;
+        }
+        #threadContainer .list-group-item:hover {
+            background-color: #f8f9fa;
+        }
+        #threadContainer .list-group-item h6 {
+            font-weight: 600;
+        }
+        #newThreadForm .card {
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        /* Toggle button active state */
+        #toggleThreadsBtn.active {
+            background-color: #fff;
+            color: #0d6efd;
+            border-color: #fff;
+        }
     </style>
 </head>
 <body>
@@ -173,7 +220,7 @@
                 </div>
                 <div class="col-auto">
                     <div class="d-flex align-items-center gap-3">
-                        <div class="zoom-controls">
+                        <div class="zoom-controls" id="zoomControls">
                             <div class="d-flex align-items-center gap-2">
                                 <div class="zoom-btn" id="zoomOutBtn"><i class="bi bi-dash"></i></div>
                                 <div class="zoom-slider-container">
@@ -192,6 +239,9 @@
                                 <i class="bi bi-arrow-left-right"></i> Page Mode
                             </button>
                         </div>
+                        <button type="button" class="btn btn-outline-light btn-sm ms-3" id="toggleThreadsBtn">
+                            <i class="bi bi-chat-left-text"></i> Discussions
+                        </button>
                     </div>
                 </div>
             </div>
@@ -206,6 +256,52 @@
 
     <div class="page-viewer scrolling-mode" id="pageViewer" style="display: none;">
         <!-- Pages will be loaded here -->
+    </div>
+
+    <div class="container mt-5" id="threadContainer" style="display: none; max-width: 800px;">
+        <div class="card mb-5 shadow">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Chapter Discussion</h5>
+                    <button class="btn btn-light btn-sm" onclick="showNewThreadForm()">
+                        <i class="bi bi-plus-circle"></i> New Thread
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- New Thread Form (initially hidden) -->
+                <div id="newThreadForm" style="display: none;" class="mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <form onsubmit="createNewThread(event)">
+                                <div class="mb-3">
+                                    <label for="threadTitle" class="form-label">Title</label>
+                                    <input type="text" class="form-control" id="threadTitle" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="threadContent" class="form-label">Content</label>
+                                    <textarea class="form-control" id="threadContent" rows="3" required></textarea>
+                                </div>
+                                <div class="text-end">
+                                    <button type="button" class="btn btn-secondary me-2" onclick="hideNewThreadForm()">Cancel</button>
+                                    <button type="submit" class="btn btn-primary">Create Thread</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Threads List -->
+                <div id="threadsList" class="list-group">
+                    <!-- Threads will be loaded here -->
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading threads...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="chapter-navigation">
@@ -228,6 +324,8 @@
         const ZOOM_INCREMENT = 0.25;       // Zoom step size
         const MAX_ZOOM = 3;                // Maximum zoom level
         const MIN_ZOOM = 0.5;              // Minimum zoom level
+        const PAGE_CACHE = {};             // Cache for preloaded images
+        const PRELOAD_OFFSET = 2;          // Number of pages to preload before/after
 
         // Parse URL parameters
         function getUrlParams() {
@@ -259,19 +357,43 @@
                 // Show loading indicator
                 document.getElementById('loading').style.display = 'flex';
                 document.getElementById('pageViewer').style.display = 'none';
+                document.getElementById('threadContainer').style.display = 'none';
+                document.getElementById('toggleThreadsBtn').classList.remove('active');
                 
-                // Fetch chapter pages
-                const pagesResponse = await fetch(`http://localhost:5005/api/chapters/${chapterId}/pages`);
+                // Get chapter details from chapter service
+                const chapterResponse = await fetch(`http://localhost:5005/api/chapters/${chapterId}`);
                 
-                if (!pagesResponse.ok) {
-                    throw new Error(`HTTP error! status: ${pagesResponse.status}`);
+                if (!chapterResponse.ok) {
+                    throw new Error(`HTTP error fetching chapter! status: ${chapterResponse.status}`);
                 }
                 
-                currentChapterData = await pagesResponse.json();
-                console.log('Chapter pages data:', currentChapterData);
+                const chapterData = await chapterResponse.json();
+                
+                // Get pages from page service
+                const pagesResponse = await fetch(`http://localhost:5013/api/pages/chapter/${chapterId}`);
+                
+                if (!pagesResponse.ok) {
+                    throw new Error(`HTTP error fetching pages! status: ${pagesResponse.status}`);
+                }
+                
+                const pagesData = await pagesResponse.json();
+                
+                // Combine the data
+                currentChapterData = {
+                    chapter_id: chapterId,
+                    comic_id: chapterData.comic_id,
+                    chapter_number: chapterData.chapter_number,
+                    title: chapterData.title,
+                    pages: pagesData.pages
+                };
+                
+                console.log('Chapter data:', currentChapterData);
                 
                 // Display pages
                 displayPages(currentChapterData);
+                
+                // Preload threads data but keep container hidden
+                loadThreads(chapterId, false);
                 
                 // Fetch navigation info (previous and next chapters)
                 const navResponse = await fetch(`http://localhost:5005/api/chapters/${chapterId}/navigation`);
@@ -284,12 +406,12 @@
                     const prevBtn = document.getElementById('prevChapter');
                     const nextBtn = document.getElementById('nextChapter');
                     
-                    if (navData.previous_chapter) {
+                    if (navData.prev_chapter) {
                         prevBtn.disabled = false;
                         prevBtn.onclick = () => navigateToChapter(
-                            navData.previous_chapter.chapter_id, 
-                            navData.previous_chapter.chapter_number, 
-                            navData.previous_chapter.title || ''
+                            navData.prev_chapter.chapter_id, 
+                            navData.prev_chapter.chapter_number,
+                            ''  // We'll need to fetch the title separately
                         );
                     } else {
                         prevBtn.disabled = true;
@@ -299,18 +421,18 @@
                         nextBtn.disabled = false;
                         nextBtn.onclick = () => navigateToChapter(
                             navData.next_chapter.chapter_id, 
-                            navData.next_chapter.chapter_number, 
-                            navData.next_chapter.title || ''
+                            navData.next_chapter.chapter_number,
+                            ''  // We'll need to fetch the title separately
                         );
                     } else {
                         nextBtn.disabled = true;
                     }
                 }
             } catch (error) {
-                console.error('Error fetching chapter pages:', error);
+                console.error('Error loading chapter:', error);
                 document.getElementById('pageViewer').innerHTML = `
                     <div class="alert alert-danger" role="alert">
-                        Error loading chapter pages. Please make sure the chapter service is running.
+                        Error loading chapter. Please make sure all microservices are running.
                         <br>
                         Error details: ${error.message}
                     </div>
@@ -324,6 +446,85 @@
         // Navigate to another chapter
         function navigateToChapter(chapterId, chapterNumber, title) {
             window.location.href = `chapter-reader.html?chapter_id=${chapterId}&chapter_number=${chapterNumber}&title=${encodeURIComponent(title)}&comic_id=${comicId}`;
+        }
+
+        // Function to preload nearby pages
+        function preloadNearbyPages(currentIndex) {
+            if (!currentChapterData || !currentChapterData.pages) return;
+            
+            const pages = currentChapterData.pages;
+            const startIndex = Math.max(0, currentIndex - PRELOAD_OFFSET);
+            const endIndex = Math.min(pages.length - 1, currentIndex + PRELOAD_OFFSET);
+            
+            // Preload pages around current index
+            for (let i = startIndex; i <= endIndex; i++) {
+                const pageNumber = pages[i];
+                const cacheKey = `${currentChapterId}_${pageNumber}`;
+                
+                // Skip if already cached
+                if (PAGE_CACHE[cacheKey]) continue;
+                
+                // Check if we have this page in localStorage
+                const cachedImageData = localStorage.getItem(cacheKey);
+                if (cachedImageData) {
+                    // If we have it in cache, use it
+                    console.log(`Using cached data for page ${pageNumber}`);
+                    PAGE_CACHE[cacheKey] = true;
+                    continue;
+                }
+                
+                // Create image object and preload
+                const img = new Image();
+                img.onload = function() {
+                    PAGE_CACHE[cacheKey] = true;
+                    console.log(`Preloaded page ${pageNumber}`);
+                    
+                    // Try to cache small images in localStorage (if supported and not too large)
+                    if (this.width * this.height < 1000000) { // Don't cache huge images
+                        try {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = this.width;
+                            canvas.height = this.height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(this, 0, 0);
+                            const dataURL = canvas.toDataURL('image/jpeg', 0.5); // Compress to save space
+                            
+                            // Check size before storing (localStorage has ~5MB limit)
+                            if (dataURL.length < 1000000) {
+                                localStorage.setItem(cacheKey, dataURL);
+                                console.log(`Cached page ${pageNumber} in localStorage`);
+                            }
+                        } catch (e) {
+                            console.warn('Error caching image in localStorage:', e);
+                        }
+                    }
+                };
+                img.src = `http://localhost:5013/api/pages/chapter/${currentChapterId}/page/${pageNumber}`;
+            }
+        }
+
+        // Initialize page loading events
+        function initPageLoadingEvents() {
+            // Add 'loaded' class to images when they finish loading
+            document.querySelectorAll('.comic-page').forEach(img => {
+                if (img.complete) {
+                    img.classList.add('loaded');
+                } else {
+                    img.addEventListener('load', function() {
+                        this.classList.add('loaded');
+                    });
+                }
+                
+                // Try to load from localStorage first if available
+                const pageNumber = img.dataset.pageNumber;
+                const cacheKey = `${currentChapterId}_${pageNumber}`;
+                const cachedImageData = localStorage.getItem(cacheKey);
+                
+                if (cachedImageData) {
+                    console.log(`Using cached image for page ${pageNumber}`);
+                    img.src = cachedImageData;
+                }
+            });
         }
 
         // Display chapter pages
@@ -340,19 +541,18 @@
                 return;
             }
             
-            // Reset page index and zoom level
+            // Reset page index but keep current zoom level
             currentPageIndex = 0;
-            currentZoomLevel = 1;
             
             // Create image elements for each page
             const pageElements = chapterData.pages.map((pageNumber, index) => `
                 <img 
-                    src="http://localhost:5005/api/chapters/${chapterData.chapter_id}/pages/${pageNumber}" 
+                    src="http://localhost:5013/api/pages/chapter/${chapterData.chapter_id}/page/${pageNumber}" 
                     class="comic-page ${index === 0 ? 'active' : ''} zoomable" 
                     alt="Page ${pageNumber}"
                     data-page-number="${pageNumber}"
                     data-page-index="${index}"
-                    loading="lazy"
+                    loading="${index < 3 ? 'eager' : 'lazy'}"
                     onerror="this.onerror=null; this.src='images/page-error.png'; console.error('Error loading page ${pageNumber}');"
                 >
             `).join('');
@@ -367,6 +567,9 @@
             pageViewer.innerHTML = pageElements + pageByPageNavigation;
             pageViewer.style.display = 'block';
             
+            // Set up image loading events
+            initPageLoadingEvents();
+            
             // Apply current reading mode
             applyReadingMode(currentReadingMode);
             
@@ -378,12 +581,16 @@
             document.querySelectorAll('.comic-page').forEach(page => {
                 page.addEventListener('click', toggleZoom);
             });
+            
+            // Preload nearby pages
+            preloadNearbyPages(currentPageIndex);
         }
         
         // Apply reading mode
         function applyReadingMode(mode) {
             const pageViewer = document.getElementById('pageViewer');
             const pageIndicator = document.getElementById('pageIndicator');
+            const zoomControls = document.getElementById('zoomControls');
             
             // Reset zoom level when changing modes
             resetZoom();
@@ -402,7 +609,7 @@
                     page.classList.toggle('active', index === currentPageIndex);
                 });
                 
-                // Show page indicator and overlays
+                // Show page indicator, overlays, and zoom controls
                 if (pageIndicator) {
                     updatePageIndicator();
                     pageIndicator.style.display = 'block';
@@ -411,6 +618,11 @@
                 document.querySelectorAll('.page-navigation-overlay').forEach(overlay => {
                     overlay.style.display = 'block';
                 });
+                
+                // Show zoom controls for page mode
+                if (zoomControls) {
+                    zoomControls.style.display = 'flex';
+                }
             } else {
                 pageViewer.classList.add('scrolling-mode');
                 pageViewer.classList.remove('page-by-page-mode');
@@ -423,7 +635,7 @@
                     page.style.transform = '';
                 });
                 
-                // Hide page indicator and overlays
+                // Hide page indicator, overlays, and zoom controls
                 if (pageIndicator) {
                     pageIndicator.style.display = 'none';
                 }
@@ -431,13 +643,18 @@
                 document.querySelectorAll('.page-navigation-overlay').forEach(overlay => {
                     overlay.style.display = 'none';
                 });
+                
+                // Hide zoom controls in scroll mode
+                if (zoomControls) {
+                    zoomControls.style.display = 'none';
+                }
             }
             
             // Save current mode
             currentReadingMode = mode;
         }
         
-        // Navigate to the previous page
+        // Function to navigate to previous page
         function navigateToPrevPage() {
             if (currentReadingMode !== 'page') return;
             
@@ -445,26 +662,43 @@
             if (currentPageIndex > 0) {
                 // Deactivate current page
                 pages[currentPageIndex].classList.remove('active');
-                // Reset any zoom on the current page
+                // Reset any transform on the current page
                 pages[currentPageIndex].style.transform = '';
+                pages[currentPageIndex].style.top = '';
+                pages[currentPageIndex].style.left = '';
+                pages[currentPageIndex].style.transformOrigin = '';
                 
                 // Go to previous page
                 currentPageIndex--;
                 
                 // Activate new current page
                 pages[currentPageIndex].classList.add('active');
-                // Apply appropriate transform for centering
-                pages[currentPageIndex].style.transform = 'translate(-50%, -50%)';
+                
+                // Apply zoom based on current zoom level
+                if (currentZoomLevel === 1) {
+                    // Center the image at normal zoom
+                    pages[currentPageIndex].style.top = '50%';
+                    pages[currentPageIndex].style.left = '50%';
+                    pages[currentPageIndex].style.transform = 'translate(-50%, -50%)';
+                    pages[currentPageIndex].style.transformOrigin = 'center';
+                } else {
+                    // Apply zoom with top visibility preservation
+                    const topOffset = Math.max(10, 50 - (currentZoomLevel - 1) * 40);
+                    pages[currentPageIndex].style.transformOrigin = 'top center';
+                    pages[currentPageIndex].style.top = `${topOffset}%`;
+                    pages[currentPageIndex].style.left = '50%';
+                    pages[currentPageIndex].style.transform = `translate(-50%, 0) scale(${currentZoomLevel})`;
+                }
                 
                 // Update page indicator
                 updatePageIndicator();
                 
-                // Reset zoom level
-                currentZoomLevel = 1;
+                // Preload pages around the new current index
+                preloadNearbyPages(currentPageIndex);
             }
         }
         
-        // Navigate to the next page
+        // Function to navigate to next page
         function navigateToNextPage() {
             if (currentReadingMode !== 'page') return;
             
@@ -472,22 +706,39 @@
             if (currentPageIndex < pages.length - 1) {
                 // Deactivate current page
                 pages[currentPageIndex].classList.remove('active');
-                // Reset any zoom on the current page
+                // Reset any transform on the current page
                 pages[currentPageIndex].style.transform = '';
+                pages[currentPageIndex].style.top = '';
+                pages[currentPageIndex].style.left = '';
+                pages[currentPageIndex].style.transformOrigin = '';
                 
                 // Go to next page
                 currentPageIndex++;
                 
                 // Activate new current page
                 pages[currentPageIndex].classList.add('active');
-                // Apply appropriate transform for centering
-                pages[currentPageIndex].style.transform = 'translate(-50%, -50%)';
+                
+                // Apply zoom based on current zoom level
+                if (currentZoomLevel === 1) {
+                    // Center the image at normal zoom
+                    pages[currentPageIndex].style.top = '50%';
+                    pages[currentPageIndex].style.left = '50%';
+                    pages[currentPageIndex].style.transform = 'translate(-50%, -50%)';
+                    pages[currentPageIndex].style.transformOrigin = 'center';
+                } else {
+                    // Apply zoom with top visibility preservation
+                    const topOffset = Math.max(10, 50 - (currentZoomLevel - 1) * 40);
+                    pages[currentPageIndex].style.transformOrigin = 'top center';
+                    pages[currentPageIndex].style.top = `${topOffset}%`;
+                    pages[currentPageIndex].style.left = '50%';
+                    pages[currentPageIndex].style.transform = `translate(-50%, 0) scale(${currentZoomLevel})`;
+                }
                 
                 // Update page indicator
                 updatePageIndicator();
                 
-                // Reset zoom level
-                currentZoomLevel = 1;
+                // Preload pages around the new current index
+                preloadNearbyPages(currentPageIndex);
             }
         }
         
@@ -582,10 +833,27 @@
             document.querySelectorAll('.comic-page').forEach(page => {
                 page.classList.remove('zoomed');
                 page.classList.add('zoomable');
+                
                 if (currentReadingMode === 'page') {
-                    page.style.transform = 'translate(-50%, -50%)';
+                    // Only apply to the active page in page mode
+                    if (page.classList.contains('active')) {
+                        page.style.transform = 'translate(-50%, -50%)';
+                        page.style.top = '50%';
+                        page.style.left = '50%';
+                        page.style.transformOrigin = 'center';
+                    } else {
+                        // Reset non-active pages completely
+                        page.style.transform = '';
+                        page.style.top = '';
+                        page.style.left = '';
+                        page.style.transformOrigin = '';
+                    }
                 } else {
-                    page.style.transform = 'scale(1)';
+                    // For scroll mode, simple reset for all pages
+                    page.style.transform = '';
+                    page.style.top = '';
+                    page.style.left = '';
+                    page.style.transformOrigin = '';
                 }
             });
         }
@@ -605,15 +873,35 @@
                 const activePage = document.querySelector('.comic-page.active');
                 if (activePage) {
                     if (currentZoomLevel === 1) {
+                        // At zoom level 1, just center the image
                         activePage.style.transform = 'translate(-50%, -50%)';
+                        activePage.style.top = '50%';
+                        activePage.style.left = '50%';
+                        activePage.style.transformOrigin = 'center';
                     } else {
-                        activePage.style.transform = `translate(-50%, -50%) scale(${currentZoomLevel})`;
+                        // When zooming, adjust positioning to keep the top visible
+                        // Calculate the top position to prevent cutting off the top
+                        const topOffset = Math.max(10, 50 - (currentZoomLevel - 1) * 40);
+                        
+                        // Change transform origin to prevent top cutoff
+                        activePage.style.transformOrigin = 'top center';
+                        
+                        // Apply transform that scales but prevents top cutoff
+                        activePage.style.top = `${topOffset}%`;
+                        activePage.style.left = '50%';
+                        activePage.style.transform = `translate(-50%, 0) scale(${currentZoomLevel})`;
                     }
                 }
             } else {
+                // For scroll mode, apply zoom to all pages
                 document.querySelectorAll('.comic-page').forEach(page => {
-                    page.style.transform = `scale(${currentZoomLevel})`;
+                    // In scroll mode, we want to zoom from the top center
                     page.style.transformOrigin = 'top center';
+                    if (currentZoomLevel === 1) {
+                        page.style.transform = '';
+                    } else {
+                        page.style.transform = `scale(${currentZoomLevel})`;
+                    }
                 });
             }
             
@@ -640,6 +928,11 @@
                 applyReadingMode('page');
             });
             
+            // Set up threads toggle button
+            document.getElementById('toggleThreadsBtn').addEventListener('click', function() {
+                toggleThreadsVisibility();
+            });
+            
             // Set up keyboard navigation
             document.addEventListener('keydown', handleKeyNavigation);
             
@@ -654,6 +947,184 @@
             // Load chapter
             loadChapter();
         });
+        
+        // Toggle threads visibility
+        function toggleThreadsVisibility() {
+            const threadContainer = document.getElementById('threadContainer');
+            const toggleBtn = document.getElementById('toggleThreadsBtn');
+            
+            // Check if the container is currently visible
+            const isVisible = threadContainer.style.display === 'block';
+            
+            if (!isVisible) {
+                // Show threads and highlight button
+                threadContainer.style.display = 'block';
+                toggleBtn.classList.add('active');
+                
+                // Scroll to threads container
+                threadContainer.scrollIntoView({ behavior: 'smooth' });
+                
+                // If threads haven't been loaded yet, load them
+                if (document.querySelector('#threadsList .spinner-border')) {
+                    loadThreads(currentChapterId, true);
+                }
+            } else {
+                // Hide threads and remove highlight
+                threadContainer.style.display = 'none';
+                toggleBtn.classList.remove('active');
+                
+                // Scroll back to comic if we're below it
+                document.getElementById('pageViewer').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+        
+        // Thread related functions
+        async function loadThreads(chapterId, showContainer = true) {
+            try {
+                const threadUrl = `http://localhost:5011/threads/chapter/${chapterId}`;
+                console.log(`Loading threads from: ${threadUrl}`);
+                
+                const response = await fetch(threadUrl, { 
+                    signal: AbortSignal.timeout(3000) // 3 second timeout
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error(`Error loading threads: Status ${response.status}, Response:`, errorText);
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const threads = await response.json();
+                console.log(`Loaded ${threads.length || 0} threads for chapter ${chapterId}`);
+                displayThreads(threads);
+                
+                // Show thread container after successful load
+                if (showContainer) {
+                    document.getElementById('threadContainer').style.display = 'block';
+                }
+                
+            } catch (error) {
+                console.error('Error loading threads:', error);
+                
+                // Handle the error gracefully with a user-friendly message
+                // Show a different message depending on error type
+                let errorMessage;
+                
+                if (error.name === 'AbortError') {
+                    errorMessage = `
+                        <div class="alert alert-warning" role="alert">
+                            <h6>Thread service not responding</h6>
+                            <p>The thread service (port 5011) timed out. Discussions cannot be loaded at this time.</p>
+                            <button class="btn btn-sm btn-outline-primary mt-2" onclick="loadThreads(${chapterId})">
+                                <i class="bi bi-arrow-clockwise"></i> Retry
+                            </button>
+                        </div>
+                    `;
+                } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+                    errorMessage = `
+                        <div class="alert alert-warning" role="alert">
+                            <h6>Thread service unavailable</h6>
+                            <p>The thread service (port 5011) appears to be offline. Discussions cannot be loaded.</p>
+                            <p>You can still read the chapter normally.</p>
+                            <button class="btn btn-sm btn-outline-primary mt-2" onclick="loadThreads(${chapterId})">
+                                <i class="bi bi-arrow-clockwise"></i> Retry
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    errorMessage = `
+                        <div class="alert alert-danger" role="alert">
+                            <h6>Error loading threads</h6>
+                            <p>There was a problem loading the discussion threads: ${error.message}</p>
+                            <button class="btn btn-sm btn-outline-primary mt-2" onclick="loadThreads(${chapterId})">
+                                <i class="bi bi-arrow-clockwise"></i> Retry
+                            </button>
+                        </div>
+                    `;
+                }
+                
+                document.getElementById('threadsList').innerHTML = errorMessage;
+                if (showContainer) {
+                    document.getElementById('threadContainer').style.display = 'block';
+                }
+            }
+        }
+        
+        function displayThreads(threads) {
+            const threadsContainer = document.getElementById('threadsList');
+            
+            if (!threads || threads.length === 0) {
+                threadsContainer.innerHTML = `
+                    <div class="text-center text-muted py-3">
+                        No discussions yet. Be the first to start a thread!
+                    </div>
+                `;
+                return;
+            }
+            
+            const threadElements = threads.map(thread => `
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">${thread.title}</h6>
+                            <p class="mb-1">${thread.content}</p>
+                            <small class="text-muted">
+                                Posted on ${new Date(thread.create_date).toLocaleDateString()}
+                                • ${thread.likes} likes • ${thread.comment_count} comments
+                            </small>
+                        </div>
+                        <span class="badge bg-primary rounded-pill">${thread.status}</span>
+                    </div>
+                </div>
+            `).join('');
+            
+            threadsContainer.innerHTML = threadElements;
+        }
+        
+        function showNewThreadForm() {
+            document.getElementById('newThreadForm').style.display = 'block';
+        }
+
+        function hideNewThreadForm() {
+            document.getElementById('newThreadForm').style.display = 'none';
+        }
+        
+        async function createNewThread(event) {
+            event.preventDefault();
+            
+            const threadData = {
+                chapter_id: currentChapterId,
+                user_id: 1, // TODO: Replace with actual user ID when authentication is implemented
+                title: document.getElementById('threadTitle').value,
+                content: document.getElementById('threadContent').value
+            };
+            
+            try {
+                const response = await fetch('http://localhost:5011/thread', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(threadData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                // Clear form and hide it
+                document.getElementById('threadTitle').value = '';
+                document.getElementById('threadContent').value = '';
+                hideNewThreadForm();
+                
+                // Reload threads
+                await loadThreads(currentChapterId);
+                
+            } catch (error) {
+                console.error('Error creating thread:', error);
+                alert('Error creating thread. Please try again.');
+            }
+        }
     </script>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
