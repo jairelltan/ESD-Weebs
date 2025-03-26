@@ -271,10 +271,33 @@
                         return total + (item.price_per_item * item.quantity);
                     }, 0).toFixed(2);
 
-                    alert(`Total cost: $${totalCost}. Proceeding to checkout...`);
+                    // Convert total cost to cents for Stripe
+                    const amountInCents = Math.round(parseFloat(totalCost) * 100);
 
-                    console.log(`Proceeding to checkout with total cost: $${totalCost}`);
-
+                    // Create payment intent
+                    fetch('http://localhost:5017/create-payment-intent', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            amount: amountInCents
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            alert('Error: ' + data.error);
+                            return;
+                        }
+                        
+                        // Redirect to payment page with the client secret
+                        window.location.href = `http://localhost:5017/?amount=${totalCost}&client_secret=${data.clientSecret}`;
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('An error occurred while processing your payment.');
+                    });
                 },
 
 
