@@ -212,6 +212,8 @@
                 // Add product to cart
                 addToCart(product) {
 
+
+                    alert(`${product.comic_name} added to cart!`)
                     console.log(`${product.comic_name} - Volume ${product.volume_name} - ${this.users.name} of id ${this.users.id} clicked on Add to Cart!`);
 
                     const url = `http://localhost:5009/addtocart/${this.users.id}/${product.Id}`;
@@ -251,6 +253,7 @@
                         product.isCooldown = false;
                     }, 1500);
 
+                    alert(`${product.comic_name} added to waitlist!`)
                     console.log(`${product.comic_name} - Volume ${product.volume_name} - ${this.users.name} id ${this.users.id} clicked on Join Waitlist!`);
 
                     const url = `http://localhost:5002/addtowishlist/${this.users.id}/${product.Id}`;
