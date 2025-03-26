@@ -22,6 +22,8 @@ CART_SERVICE_URL = "http://127.0.0.1:5009/addtocart"
 # Waitlist Delete Microservice URL
 WAITLIST_DELETE_URL = "http://127.0.0.1:5003/waitlistdelete"
 
+# Notification Microservice URL
+NOTIFICATION_SERVICE_URL = "http://127.0.0.1:5007/notification/waitlist"
 
 def process_waitlist_and_add_to_cart():
     # Ensure the task runs only once and doesn't restart if it is already running
@@ -92,6 +94,14 @@ def process_waitlist_and_add_to_cart():
 
                 # Remove processed entry
                 waitlist_data_sorted.remove(entry)
+
+                notification_payload = {"user_id":user_id}
+                notification_response = requests.post(f"{NOTIFICATION_SERVICE_URL}", json=notification_payload)
+
+                if notification_response.status_code == 200:
+                    print(f"✅ Notification sent to user {user_id}")
+                else:
+                    print(f"❌ Failed to send notification to user {user_id}: {notification_response.status_code}")
 
     # Clear the task_event flag after task completion
     task_event.clear()
