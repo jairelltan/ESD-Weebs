@@ -130,79 +130,79 @@ def get_page_image(chapter_id, page_number):
         cursor.close()
         conn.close()
 
-# @app.route('/api/pages/upload', methods=['POST'])
-# def upload_page():
-#     """Upload a page image"""
-#     if 'page_image' not in request.files:
-#         return jsonify({"error": "No image file provided"}), 400
+@app.route('/api/pages/upload', methods=['POST'])
+def upload_page():
+    """Upload a page image"""
+    if 'page_image' not in request.files:
+        return jsonify({"error": "No image file provided"}), 400
     
-#     file = request.files['page_image']
-#     if file.filename == '':
-#         return jsonify({"error": "No image file selected"}), 400
+    file = request.files['page_image']
+    if file.filename == '':
+        return jsonify({"error": "No image file selected"}), 400
     
-#     # Get form data
-#     comic_id = request.form.get('comic_id')
-#     chapter_id = request.form.get('chapter_id')
-#     page_number = request.form.get('page_number')
+    # Get form data
+    comic_id = request.form.get('comic_id')
+    chapter_id = request.form.get('chapter_id')
+    page_number = request.form.get('page_number')
     
-#     if not all([comic_id, chapter_id, page_number]):
-#         return jsonify({"error": "Missing required parameters"}), 400
+    if not all([comic_id, chapter_id, page_number]):
+        return jsonify({"error": "Missing required parameters"}), 400
     
-#     try:
-#         comic_id = int(comic_id)
-#         chapter_id = int(chapter_id)
-#         page_number = int(page_number)
-#     except ValueError:
-#         return jsonify({"error": "Invalid parameter values"}), 400
+    try:
+        comic_id = int(comic_id)
+        chapter_id = int(chapter_id)
+        page_number = int(page_number)
+    except ValueError:
+        return jsonify({"error": "Invalid parameter values"}), 400
     
-#     conn = get_db_connection()
-#     if not conn:
-#         return jsonify({"error": "Database connection failed"}), 500
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database connection failed"}), 500
     
-#     cursor = conn.cursor()
-#     try:
-#         # Read the image data
-#         image_data = file.read()
+    cursor = conn.cursor()
+    try:
+        # Read the image data
+        image_data = file.read()
         
-#         # Check if the page already exists
-#         cursor.execute("""
-#             SELECT 1 FROM page 
-#             WHERE chapter_id = %s AND page_number = %s
-#         """, (chapter_id, page_number))
+        # Check if the page already exists
+        cursor.execute("""
+            SELECT 1 FROM page 
+            WHERE chapter_id = %s AND page_number = %s
+        """, (chapter_id, page_number))
         
-#         exists = cursor.fetchone() is not None
+        exists = cursor.fetchone() is not None
         
-#         if exists:
-#             # Update the existing page
-#             cursor.execute("""
-#                 UPDATE page 
-#                 SET page_image = %s, comic_id = %s
-#                 WHERE chapter_id = %s AND page_number = %s
-#             """, (image_data, comic_id, chapter_id, page_number))
-#             message = "Page updated successfully"
-#         else:
-#             # Insert a new page
-#             cursor.execute("""
-#                 INSERT INTO page (chapter_id, page_number, comic_id, page_image) 
-#                 VALUES (%s, %s, %s, %s)
-#             """, (chapter_id, page_number, comic_id, image_data))
-#             message = "Page uploaded successfully"
+        if exists:
+            # Update the existing page
+            cursor.execute("""
+                UPDATE page 
+                SET page_image = %s, comic_id = %s
+                WHERE chapter_id = %s AND page_number = %s
+            """, (image_data, comic_id, chapter_id, page_number))
+            message = "Page updated successfully"
+        else:
+            # Insert a new page
+            cursor.execute("""
+                INSERT INTO page (chapter_id, page_number, comic_id, page_image) 
+                VALUES (%s, %s, %s, %s)
+            """, (chapter_id, page_number, comic_id, image_data))
+            message = "Page uploaded successfully"
         
-#         conn.commit()
+        conn.commit()
         
-#         return jsonify({
-#             "message": message,
-#             "chapter_id": chapter_id,
-#             "page_number": page_number
-#         })
+        return jsonify({
+            "message": message,
+            "chapter_id": chapter_id,
+            "page_number": page_number
+        })
     
-#     except mysql.connector.Error as e:
-#         conn.rollback()
-#         return jsonify({"error": f"Database error: {str(e)}"}), 500
+    except mysql.connector.Error as e:
+        conn.rollback()
+        return jsonify({"error": f"Database error: {str(e)}"}), 500
     
-#     finally:
-#         cursor.close()
-#         conn.close()
+    finally:
+        cursor.close()
+        conn.close()
 
 # @app.route('/api/pages/chapter/<int:chapter_id>/delete', methods=['DELETE'])
 # def delete_chapter_pages(chapter_id):
