@@ -1,0 +1,20 @@
+-- Create a new database for pages
+CREATE DATABASE IF NOT EXISTS page_db;
+USE page_db;
+
+-- Drop existing tables if they exist
+DROP TABLE IF EXISTS page;
+
+-- Create page table
+CREATE TABLE IF NOT EXISTS page (
+    page_id INT AUTO_INCREMENT PRIMARY KEY,
+    comic_id INT NOT NULL,
+    chapter_id INT NOT NULL,
+    page_number INT NOT NULL,
+    page_image LONGBLOB NOT NULL,
+    UNIQUE KEY unique_page (comic_id, chapter_id, page_number)
+);
+
+-- Note: This database doesn't have a foreign key constraint to the chapter table
+-- since it's in a separate microservice. Referential integrity will be maintained
+-- at the application level. 

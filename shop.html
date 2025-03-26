@@ -171,7 +171,7 @@
                         <!-- Error handling -->
                         <div v-if="comicError" class="col-12 text-center">
                             <div class="alert alert-danger" role="alert">
-                                Error loading comics. Please make sure the comic service is running on port 5001.
+                                Error loading comics. Please make sure the comic service is running on port 5002.
                                 <br>
                                 Error details: {{ comicError }}
                                 <br>
@@ -396,8 +396,8 @@
                 // Comic collection methods
                 fetchComics() {
                     this.comicLoading = true;
-                    console.log('Attempting to fetch comics from http://localhost:5001/comic');
-                    fetch('http://localhost:5001/comic')
+                    console.log('Attempting to fetch comics from http://localhost:5002/comic');
+                    fetch('http://localhost:5002/comic')
                         .then(response => {
                             console.log('Response status:', response.status);
                             if (!response.ok) {
