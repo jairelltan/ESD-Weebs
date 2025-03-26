@@ -86,11 +86,10 @@
                             <p class="card-text">Stock: {{ product.quantity_in_stock }} available</p>
 
                             <!-- Button Text based on stock availability -->
-                            <button class="btn btn-primary"
-                            :disabled="product.isCooldown"
-                            @click="product.quantity_in_stock > 0 ? addToCart(product) : addToWaitlist(product)">
-                            {{ product.quantity_in_stock > 0 ? 'Purchase' : 'Join Waitlist' }}
-                        </button>                        
+                            <button class="btn btn-primary" :disabled="product.isCooldown"
+                                @click="product.quantity_in_stock > 0 ? addToCart(product) : addToWaitlist(product)">
+                                {{ product.quantity_in_stock > 0 ? 'Purchase' : 'Join Waitlist' }}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -108,10 +107,23 @@
                         <div v-if="cartItems.length > 0">
                             <ul class="list-group">
                                 <li class="list-group-item" v-for="item in cartItems" :key="item.id">
-                                    <div class="d-flex justify-content-between">
-                                        <span>{{ item.comic_name }} - Volume {{ item.comic_volume }}</span>
-                                        <p>Quantity: {{ item.quantity }}</p>
-                                        <p>Price: {{ item.price_per_item }}</p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="col-4">
+                                            <p>{{ item.comic_name }} - Volume {{ item.comic_volume }}</p>
+                                        </div>
+                                        <div class="col-2">
+                                            <p>Quantity: {{ item.quantity }}</p>
+                                        </div>
+                                        <div class="co-2">
+                                            <p>Price per item: {{ item.price_per_item }}</p>
+                                        </div>
+                                        <div class="col-2">
+                                            <p><strong>Total: {{ (item.price_per_item * item.quantity).toFixed(2)
+                                                    }}</strong></p>
+                                        </div>
+                                        <div class="col-auto">
+                                            <i class="bi bi-trash text-danger"></i>
+                                        </div>
                                     </div>
                                 </li>
                             </ul>
@@ -240,6 +252,12 @@
                             console.error('Error adding to cart:', error);
                             alert('Error adding to cart. Please try again.');
                         });
+                },
+
+                calculateTotal() {
+                    return this.cartItems.reduce((total, item) => {
+                        return total + (item.price_per_item * item.quantity);
+                    }, 0).toFixed(2); // Format it to two decimal places
                 },
 
 
