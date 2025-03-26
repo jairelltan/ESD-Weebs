@@ -122,7 +122,7 @@
                                                     }}</strong></p>
                                         </div>
                                         <div class="col-auto">
-                                            <i class="bi bi-trash text-danger"></i>
+                                            <i class="bi bi-trash text-danger" @click="deleteEntry(item)"></i>
                                         </div>
                                     </div>
                                 </li>
@@ -134,7 +134,8 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        <button type="button" class="btn btn-primary">Proceed to Checkout</button>
+                        <button type="button" class="btn btn-primary" @click="proceedtoCheckout">Proceed to
+                            Checkout</button>
                     </div>
                 </div>
             </div>
@@ -257,9 +258,29 @@
                 calculateTotal() {
                     return this.cartItems.reduce((total, item) => {
                         return total + (item.price_per_item * item.quantity);
-                    }, 0).toFixed(2); // Format it to two decimal places
+                    }, 0).toFixed(2);
                 },
 
+                proceedtoCheckout() {
+                    if (this.cartItems.length === 0) {
+                        alert("Your cart is empty!");
+                        return;
+                    }
+
+                    const totalCost = this.cartItems.reduce((total, item) => {
+                        return total + (item.price_per_item * item.quantity);
+                    }, 0).toFixed(2);
+
+                    alert(`Total cost: $${totalCost}. Proceeding to checkout...`);
+
+                    console.log(`Proceeding to checkout with total cost: $${totalCost}`);
+
+                },
+
+
+                deleteEntry(entry) {
+                    console.log(entry)
+                },
 
                 addToWaitlist(product) {
                     if (product.isCooldown) return;
