@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Payment | ESD-Weebs</title>
+    <script src="https://js.stripe.com/v3/"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: #2c3e50;
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #5469d4 0%, #4054b2 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('https://images.unsplash.com/photo-1563986768609-322da39675d5?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80') center/cover;
+            opacity: 0.1;
+            z-index: 0;
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            position: relative;
+            z-index: 1;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .payment-section {
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .payment-info {
+            background: #f8fafc;
+            padding: 2rem;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .payment-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .form-row {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #2c3e50;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        #card-element {
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            background: white;
+            transition: border-color 0.3s ease;
+        }
+
+        #card-element:focus-within {
+            border-color: #5469d4;
+        }
+
+        #card-errors {
+            color: #dc3545;
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        button {
+            background: linear-gradient(135deg, #5469d4 0%, #4054b2 100%);
+            color: white;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(84, 105, 212, 0.3);
+        }
+
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .amount-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .amount-input:focus {
+            outline: none;
+            border-color: #5469d4;
+        }
+
+        .success-message {
+            display: none;
+            text-align: center;
+            color: #28a745;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f0fff4;
+            border-radius: 8px;
+            border: 1px solid #c6f6d5;
+        }
+
+        .security-features {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .security-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            color: #64748b;
+        }
+
+        .security-item i {
+            color: #5469d4;
+            font-size: 1.2rem;
+        }
+
+        @media (max-width: 768px) {
+            .payment-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                margin: 1rem;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-content">
+                <h1>Payment</h1>
+                <p class="subtitle">Complete your purchase with confidence</p>
+            </div>
+        </div>
+        <div class="payment-section">
+            <div class="payment-info">
+                <h2 style="margin-bottom: 1.5rem; color: #2c3e50;">Payment Details</h2>
+                <form id="payment-form" class="payment-form">
+                    <div class="form-row">
+                        <label for="amount">Amount (USD)</label>
+                        <input type="number" id="amount" class="amount-input" min="1" step="0.01" required placeholder="Enter amount">
+                    </div>
+                    <div class="form-row">
+                        <label for="card-element">Credit or debit card</label>
+                        <div id="card-element"></div>
+                        <div id="card-errors" role="alert"></div>
+                    </div>
+                    <button type="submit" id="submit-button">
+                        <i class="fas fa-lock" style="margin-right: 8px;"></i>
+                        Pay Securely
+                    </button>
+                </form>
+                <div class="security-features">
+                    <div class="security-item">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>256-bit SSL Security</span>
+                    </div>
+                    <div class="security-item">
+                        <i class="fas fa-lock"></i>
+                        <span>Secure Payment</span>
+                    </div>
+                    <div class="security-item">
+                        <i class="fas fa-credit-card"></i>
+                        <span>PCI Compliant</span>
+                    </div>
+                    <div class="security-item">
+                        <i class="fas fa-user-shield"></i>
+                        <span>Data Protection</span>
+                    </div>
+                </div>
+            </div>
+            <div class="payment-info">
+                <h2 style="margin-bottom: 1.5rem; color: #2c3e50;">Order Summary</h2>
+                <div style="margin-bottom: 2rem;">
+                    <p style="color: #64748b; margin-bottom: 1rem;">
+                        Your payment information is encrypted and secure. We never store your card details.
+                    </p>
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                        <img src="https://stripe.com/img/v3/home/social.png" alt="Stripe" style="height: 30px;">
+                        <span style="color: #64748b;">Powered by Stripe</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="success-message" class="success-message">
+            <i class="fas fa-check-circle" style="margin-right: 8px;"></i>
+            Payment successful! Thank you for your purchase.
+        </div>
+    </div>
+
+    <script>
+        const stripe = Stripe('{{ stripe_public_key }}');
+        const elements = stripe.elements();
+        
+        // Get amount from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const amount = urlParams.get('amount');
+        const clientSecret = urlParams.get('client_secret');
+        
+        // Set the amount in the input field if available
+        if (amount) {
+            document.getElementById('amount').value = amount;
+        }
+
+        const card = elements.create('card', {
+            style: {
+                base: {
+                    fontSize: '16px',
+                    color: '#2c3e50',
+                    '::placeholder': {
+                        color: '#aab7c4'
+                    }
+                },
+                invalid: {
+                    color: '#dc3545',
+                    iconColor: '#dc3545'
+                }
+            }
+        });
+        card.mount('#card-element');
+
+        const form = document.getElementById('payment-form');
+        const submitButton = document.getElementById('submit-button');
+        const successMessage = document.getElementById('success-message');
+
+        card.on('change', function(event) {
+            const displayError = document.getElementById('card-errors');
+            if (event.error) {
+                displayError.textContent = event.error.message;
+            } else {
+                displayError.textContent = '';
+            }
+        });
+
+        form.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i> Processing...';
+
+            const amount = document.getElementById('amount').value;
+            
+            try {
+                let paymentIntent;
+                if (clientSecret) {
+                    // Use the client secret from URL if available
+                    paymentIntent = await stripe.confirmCardPayment(clientSecret, {
+                        payment_method: {
+                            card: card,
+                        }
+                    });
+                } else {
+                    // Create new payment intent if no client secret
+                    const response = await fetch('/create-payment-intent', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            amount: Math.round(amount * 100) // Convert to cents
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.error) {
+                        const errorElement = document.getElementById('card-errors');
+                        errorElement.textContent = data.error;
+                        submitButton.disabled = false;
+                        submitButton.innerHTML = '<i class="fas fa-lock" style="margin-right: 8px;"></i> Pay Securely';
+                        return;
+                    }
+
+                    paymentIntent = await stripe.confirmCardPayment(data.clientSecret, {
+                        payment_method: {
+                            card: card,
+                        }
+                    });
+                }
+
+                if (paymentIntent.error) {
+                    const errorElement = document.getElementById('card-errors');
+                    errorElement.textContent = paymentIntent.error.message;
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = '<i class="fas fa-lock" style="margin-right: 8px;"></i> Pay Securely';
+                } else {
+                    successMessage.style.display = 'block';
+                    form.style.display = 'none';
+                }
+            } catch (error) {
+                const errorElement = document.getElementById('card-errors');
+                errorElement.textContent = 'An error occurred. Please try again.';
+                submitButton.disabled = false;
+                submitButton.innerHTML = '<i class="fas fa-lock" style="margin-right: 8px;"></i> Pay Securely';
+            }
+        });
+    </script>
+</body>
+</html> 
