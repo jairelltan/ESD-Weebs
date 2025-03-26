@@ -351,6 +351,36 @@
         </div>
     </div>
 
+    <!-- Comment Modal -->
+    <div class="modal fade" id="commentModal" tabindex="-1" aria-labelledby="commentModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="commentModalLabel">Comments</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="commentsList" class="list-group">
+                        <!-- Comments will be loaded here -->
+                    </div>
+                    
+                    <!-- New Comment Form -->
+                    <div class="mt-4 border-top pt-3">
+                        <form id="newCommentForm" onsubmit="createNewComment(event)">
+                            <div class="mb-3">
+                                <label for="commentContent" class="form-label">Your Comment</label>
+                                <textarea class="form-control" id="commentContent" rows="3" required></textarea>
+                            </div>
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-primary">Post Comment</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Store comics data globally
         let allComics = [];
@@ -1060,7 +1090,12 @@
                                 • ${thread.likes} likes • ${thread.comment_count} comments
                             </small>
                         </div>
-                        <span class="badge bg-primary rounded-pill">${thread.status}</span>
+                        <div>
+                            <span class="badge bg-primary rounded-pill">${thread.status}</span>
+                            <button class="btn btn-sm btn-outline-primary ms-2" onclick="showComments(${thread.thread_id})">
+                                <i class="bi bi-chat"></i> View Comments
+                            </button>
+                        </div>
                     </div>
                 </div>
             `).join('');
@@ -1109,6 +1144,234 @@
             } catch (error) {
                 console.error('Error creating thread:', error);
                 alert('Error creating thread. Please try again.');
+            }
+        }
+
+        // Add these new functions for comment functionality
+        let currentThreadId = null;
+        let commentModal = null;
+
+        async function showComments(threadId) {
+            currentThreadId = threadId;
+            
+            if (!commentModal) {
+                commentModal = new bootstrap.Modal(document.getElementById('commentModal'));
+            }
+            
+            // Show loading state
+            document.getElementById('commentsList').innerHTML = `
+                <div class="text-center py-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            `;
+            
+            commentModal.show();
+            
+            try {
+                const response = await fetch(`http://localhost:5012/comments/thread/${threadId}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const comments = await response.json();
+                displayComments(comments);
+            } catch (error) {
+                console.error('Error loading comments:', error);
+                document.getElementById('commentsList').innerHTML = `
+                    <div class="alert alert-danger" role="alert">
+                        Error loading comments. Please try again later.
+                    </div>
+                `;
+            }
+        }
+
+        function displayComments(comments) {
+            const commentsContainer = document.getElementById('commentsList');
+            
+            if (!comments || comments.length === 0) {
+                commentsContainer.innerHTML = `
+                    <div class="text-center text-muted py-3">
+                        No comments yet. Be the first to comment!
+                    </div>
+                `;
+                return;
+            }
+            
+            const commentElements = comments.map(comment => `
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <p class="mb-1">${comment.content}</p>
+                            <small class="text-muted">
+                                Posted on ${new Date(comment.created_at).toLocaleDateString()}
+                                • ${comment.likes} likes
+                                • ${comment.reply_count} replies
+                            </small>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-outline-primary me-2" onclick="likeComment(${comment.comment_id})">
+                                <i class="bi bi-heart"></i> Like
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="showReplyForm(${comment.comment_id})">
+                                <i class="bi bi-reply"></i> Reply
+                            </button>
+                        </div>
+                    </div>
+                    <div id="reply-form-${comment.comment_id}" class="mt-2" style="display: none;">
+                        <form onsubmit="createReply(event, ${comment.comment_id})">
+                            <div class="mb-2">
+                                <textarea class="form-control form-control-sm" rows="2" required></textarea>
+                            </div>
+                            <div class="text-end">
+                                <button type="button" class="btn btn-sm btn-secondary me-2" onclick="hideReplyForm(${comment.comment_id})">Cancel</button>
+                                <button type="submit" class="btn btn-sm btn-primary">Reply</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div id="replies-${comment.comment_id}" class="ms-4 mt-2">
+                        <!-- Replies will be loaded here -->
+                    </div>
+                </div>
+            `).join('');
+            
+            commentsContainer.innerHTML = commentElements;
+            
+            // Load replies for each comment
+            comments.forEach(comment => {
+                if (comment.reply_count > 0) {
+                    loadReplies(comment.comment_id);
+                }
+            });
+        }
+
+        async function loadReplies(commentId) {
+            try {
+                const response = await fetch(`http://localhost:5012/comments/${commentId}/replies`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const replies = await response.json();
+                displayReplies(commentId, replies);
+            } catch (error) {
+                console.error('Error loading replies:', error);
+            }
+        }
+
+        function displayReplies(commentId, replies) {
+            const repliesContainer = document.getElementById(`replies-${commentId}`);
+            
+            if (!replies || replies.length === 0) return;
+            
+            const replyElements = replies.map(reply => `
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <p class="mb-1">${reply.content}</p>
+                            <small class="text-muted">
+                                Posted on ${new Date(reply.created_at).toLocaleDateString()}
+                                • ${reply.likes} likes
+                            </small>
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary" onclick="likeComment(${reply.comment_id})">
+                            <i class="bi bi-heart"></i> Like
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            
+            repliesContainer.innerHTML = replyElements;
+        }
+
+        function showReplyForm(commentId) {
+            document.getElementById(`reply-form-${commentId}`).style.display = 'block';
+        }
+
+        function hideReplyForm(commentId) {
+            document.getElementById(`reply-form-${commentId}`).style.display = 'none';
+        }
+
+        async function createNewComment(event) {
+            event.preventDefault();
+            
+            const commentData = {
+                thread_id: currentThreadId,
+                user_id: 1, // TODO: Replace with actual user ID when authentication is implemented
+                content: document.getElementById('commentContent').value
+            };
+            
+            try {
+                const response = await fetch('http://localhost:5012/comment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(commentData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                // Clear form and reload comments
+                document.getElementById('commentContent').value = '';
+                await showComments(currentThreadId);
+                
+            } catch (error) {
+                console.error('Error creating comment:', error);
+                alert('Error creating comment. Please try again.');
+            }
+        }
+
+        async function createReply(event, parentId) {
+            event.preventDefault();
+            
+            const replyData = {
+                thread_id: currentThreadId,
+                user_id: 1, // TODO: Replace with actual user ID when authentication is implemented
+                parent_id: parentId,
+                content: event.target.querySelector('textarea').value
+            };
+            
+            try {
+                const response = await fetch('http://localhost:5012/comment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(replyData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                // Hide reply form and reload replies
+                hideReplyForm(parentId);
+                await loadReplies(parentId);
+                
+            } catch (error) {
+                console.error('Error creating reply:', error);
+                alert('Error creating reply. Please try again.');
+            }
+        }
+
+        async function likeComment(commentId) {
+            try {
+                const response = await fetch(`http://localhost:5012/comment/${commentId}/like`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                // Reload comments to update like count
+                await showComments(currentThreadId);
+                
+            } catch (error) {
+                console.error('Error liking comment:', error);
+                alert('Error liking comment. Please try again.');
             }
         }
 
