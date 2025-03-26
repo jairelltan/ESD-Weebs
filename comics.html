@@ -278,6 +278,29 @@
             font-size: 0.875rem;
             color: #6c757d;
         }
+        /* Add lock icon styling */
+        .chapter-locked {
+            color: #6c757d;
+            background-color: #f8f9fa;
+            cursor: not-allowed;
+            opacity: 0.8;
+            pointer-events: auto !important;
+        }
+        .lock-icon {
+            color: #dc3545;
+            margin-left: 5px;
+        }
+        /* Loading message styles */
+        .loading-message {
+            display: flex;
+            align-items: center;
+            background: #007bff;
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -407,17 +430,29 @@
                                 </div>
                             </div>
                             <div v-else class="list-group chapter-list">
+                                <div class="mb-3 d-flex justify-content-between align-items-center">
+                                    <span class="text-muted fs-6">Showing {{ chapters.length }} chapters</span>
+                                    <button class="btn btn-sm btn-outline-primary" @click="refreshChapters">
+                                        <i class="bi bi-arrow-clockwise me-1"></i> Refresh Status
+                                    </button>
+                                </div>
                                 <div v-for="chapter in chapters" 
                                      :key="chapter.chapter_id" 
-                                     class="chapter-item" 
+                                     class="chapter-item"
+                                     :class="{'chapter-locked': chapter.is_locked}"
                                      @click="openChapterPage(chapter)">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div>
                                             <strong>Chapter {{ chapter.chapter_number }}</strong>
                                             {{ chapter.title ? ': ' + chapter.title : '' }}
+                                            <i v-if="chapter.is_locked" class="bi bi-lock-fill lock-icon" 
+                                               title="This chapter is locked"></i>
                                         </div>
-                                        <span class="badge bg-primary rounded-pill">
+                                        <span v-if="!chapter.is_locked" class="badge bg-primary rounded-pill">
                                             <i class="bi bi-eye"></i> Read
+                                        </span>
+                                        <span v-else class="badge bg-secondary rounded-pill">
+                                            <i class="bi bi-lock-fill"></i> Locked
                                         </span>
                                     </div>
                                 </div>
@@ -547,20 +582,101 @@
                     }
                     comicModal.show();
                     
-                    // Fetch chapters
+                    // Fetch chapters with locked status
                     try {
-                        const response = await fetch(`http://localhost:5005/api/comics/${comic.comic_id}/chapters`);
+                        // Get current user ID (assuming user 1 for now)
+                        const userId = currentUser.value ? currentUser.value.id : 1;
                         
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
+                        // First, get all chapters for the comic
+                        const chaptersResponse = await fetch(`http://localhost:5005/api/comics/${comic.comic_id}/chapters`);
+                        
+                        if (!chaptersResponse.ok) {
+                            throw new Error(`HTTP error! status: ${chaptersResponse.status}`);
                         }
                         
-                        const data = await response.json();
-                        console.log('Chapters data:', data);
+                        const chaptersData = await chaptersResponse.json();
+                        console.log('All chapters data:', chaptersData);
                         
-                        chapters.value = data.chapters.sort((a, b) => b.chapter_number - a.chapter_number);
+                        // Get the user's reading history
+                        const historyResponse = await fetch(`http://localhost:5014/api/history/user/${userId}`);
+                        const historyData = await historyResponse.json();
+                        
+                        // Create set of read chapter IDs
+                        const readChapterIds = new Set();
+                        if (historyResponse.ok && historyData.history) {
+                            historyData.history.forEach(entry => {
+                                if (entry.chapter_id) {
+                                    readChapterIds.add(entry.chapter_id);
+                                }
+                            });
+                        }
+                        
+                        console.log('Read chapter IDs:', Array.from(readChapterIds));
+                        
+                        // Process chapters to add correct locked status
+                        const processedChapters = chaptersData.chapters.map(chapter => {
+                            const chapterNumber = parseFloat(chapter.chapter_number);
+                            
+                            // A chapter is unlocked if:
+                            // 1. It's chapter 1 (always accessible)
+                            // 2. It's in the reading history
+                            // 3. The previous chapter has been read
+                            let isUnlocked = false;
+                            
+                            if (chapterNumber === 1) {
+                                // First chapter is always accessible
+                                isUnlocked = true;
+                            } else if (readChapterIds.has(chapter.chapter_id)) {
+                                // Chapter is in reading history
+                                isUnlocked = true;
+                            } else {
+                                // Check if previous chapter has been read
+                                const prevChapter = chaptersData.chapters.find(c => 
+                                    parseFloat(c.chapter_number) === chapterNumber - 1);
+                                
+                                if (prevChapter && readChapterIds.has(prevChapter.chapter_id)) {
+                                    isUnlocked = true;
+                                }
+                            }
+                            
+                            return {
+                                ...chapter,
+                                is_locked: !isUnlocked
+                            };
+                        });
+                        
+                        // Sort chapters in descending order by chapter number
+                        chapters.value = processedChapters.sort((a, b) => {
+                            const aNum = parseFloat(a.chapter_number);
+                            const bNum = parseFloat(b.chapter_number);
+                            return bNum - aNum; // Descending order
+                        });
                     } catch (error) {
                         console.error('Error fetching chapters:', error);
+                        
+                        // Fallback to regular chapter fetch if the above fails
+                        try {
+                            const fallbackResponse = await fetch(`http://localhost:5005/api/comics/${comic.comic_id}/chapters`);
+                            
+                            if (!fallbackResponse.ok) {
+                                throw new Error(`HTTP error! status: ${fallbackResponse.status}`);
+                            }
+                            
+                            const fallbackData = await fallbackResponse.json();
+                            console.log('Fallback chapters data:', fallbackData);
+                            
+                            // Just display all chapters without lock information in fallback mode
+                            chapters.value = fallbackData.chapters.map(chapter => ({
+                                ...chapter,
+                                is_locked: false // Show all as unlocked in fallback mode
+                            })).sort((a, b) => {
+                                const aNum = parseFloat(a.chapter_number);
+                                const bNum = parseFloat(b.chapter_number);
+                                return bNum - aNum; // Descending order
+                            });
+                        } catch (fallbackError) {
+                            console.error('Error with fallback chapter fetch:', fallbackError);
+                        }
                     } finally {
                         loadingChapters.value = false;
                     }
@@ -568,8 +684,286 @@
 
                 // Function to open chapter in a new page
                 function openChapterPage(chapter) {
-                    const url = `chapter-reader.html?chapter_id=${chapter.chapter_id}&chapter_number=${chapter.chapter_number}&title=${encodeURIComponent(chapter.title || '')}&comic_id=${selectedComic.value.comic_id}`;
-                    window.location.href = url;
+                    const userId = currentUser.value ? currentUser.value.id : 1;
+                    
+                    // Show loading indicator or disable button
+                    const loadingMessage = document.createElement('div');
+                    loadingMessage.className = 'loading-message';
+                    loadingMessage.innerHTML = `
+                        <div class="spinner-border spinner-border-sm text-light me-2" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        Checking chapter access...
+                    `;
+                    
+                    // Find active modal if any
+                    const modalBody = document.querySelector('.modal-body');
+                    if (modalBody) {
+                        const chapterElements = modalBody.querySelectorAll('.chapter-item');
+                        
+                        // Disable all chapter items during check
+                        chapterElements.forEach(item => {
+                            item.style.pointerEvents = 'none';
+                            item.style.opacity = '0.7';
+                        });
+                        
+                        // Add loading message
+                        modalBody.prepend(loadingMessage);
+                    }
+                    
+                    console.log(`Checking access for chapter ${chapter.chapter_id}, user ${userId}`);
+                    
+                    // Call the read_comic service instead of directly navigating
+                    fetch(`http://localhost:5020/read/${chapter.chapter_id}/user/${userId}`)
+                        .then(response => {
+                            console.log('Response received:', response.status);
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            console.log('Access check result:', data);
+                            
+                            // Re-enable chapter items
+                            if (modalBody) {
+                                const chapterElements = modalBody.querySelectorAll('.chapter-item');
+                                chapterElements.forEach(item => {
+                                    item.style.pointerEvents = '';
+                                    item.style.opacity = '';
+                                });
+                                
+                                // Remove loading message
+                                const loadingMessage = modalBody.querySelector('.loading-message');
+                                if (loadingMessage) {
+                                    modalBody.removeChild(loadingMessage);
+                                }
+                            }
+                            
+                            if (data.is_accessible) {
+                                // If chapter is accessible, redirect to the reader
+                                window.location.href = data.redirect_url;
+                            } else if (data.status === 'locked') {
+                                // Chapter is locked, prompt for purchase
+                                handleLockedChapter(chapter, data);
+                            } else {
+                                console.error('Unexpected response from read service:', data);
+                                alert('Error accessing chapter. Please try again.');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error checking chapter access:', error);
+                            alert('Error checking chapter access. Please try again.');
+                            
+                            // Re-enable chapter items
+                            if (modalBody) {
+                                const chapterElements = modalBody.querySelectorAll('.chapter-item');
+                                chapterElements.forEach(item => {
+                                    item.style.pointerEvents = '';
+                                    item.style.opacity = '';
+                                });
+                                
+                                // Remove loading message
+                                const loadingMessage = modalBody.querySelector('.loading-message');
+                                if (loadingMessage) {
+                                    modalBody.removeChild(loadingMessage);
+                                }
+                            }
+                        });
+                }
+                
+                // Function to handle locked chapter prompt
+                function handleLockedChapter(chapter, data) {
+                    // Check if user can afford to purchase
+                    if (data.can_afford) {
+                        // User has enough points, ask if they want to purchase
+                        const confirmPurchase = confirm(
+                            `This chapter is locked. Would you like to unlock it for ${data.unlock_cost} points? ` +
+                            `\n\nYou currently have ${data.user_points} points.`
+                        );
+                        
+                        if (confirmPurchase) {
+                            purchaseChapter(chapter.chapter_id, data);
+                        }
+                    } else {
+                        // User doesn't have enough points, prompt to subscribe
+                        const goToSubscription = confirm(
+                            `This chapter is locked and requires ${data.unlock_cost} points to unlock. ` +
+                            `\n\nYou currently have ${data.user_points} points, which is not enough. ` +
+                            `\n\nWould you like to subscribe to get more points?`
+                        );
+                        
+                        if (goToSubscription) {
+                            window.location.href = 'subscription.html';
+                        }
+                    }
+                }
+                
+                // Function to purchase chapter access
+                function purchaseChapter(chapterId, data) {
+                    const userId = currentUser.value ? currentUser.value.id : 1;
+                    
+                    // Show loading indicator
+                    const loadingMessage = document.createElement('div');
+                    loadingMessage.className = 'loading-message';
+                    loadingMessage.innerHTML = `
+                        <div class="spinner-border spinner-border-sm text-light me-2" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        Processing purchase...
+                    `;
+                    
+                    // Find active modal if any
+                    const modalBody = document.querySelector('.modal-body');
+                    if (modalBody) {
+                        const chapterElements = modalBody.querySelectorAll('.chapter-item');
+                        
+                        // Disable all chapter items during processing
+                        chapterElements.forEach(item => {
+                            item.style.pointerEvents = 'none';
+                            item.style.opacity = '0.7';
+                        });
+                        
+                        // Add loading message
+                        modalBody.prepend(loadingMessage);
+                    }
+                    
+                    console.log(`Purchasing chapter ${chapterId} for user ${userId}`);
+                    
+                    fetch(`http://localhost:5020/purchase/${chapterId}/user/${userId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => {
+                        console.log('Purchase response received:', response.status);
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Purchase result:', data);
+                        
+                        // Re-enable chapter items
+                        if (modalBody) {
+                            // Remove loading message
+                            const loadingMessage = modalBody.querySelector('.loading-message');
+                            if (loadingMessage) {
+                                modalBody.removeChild(loadingMessage);
+                            }
+                        }
+                        
+                        if (data.status === 'success') {
+                            // Update user points in the UI
+                            if (currentUser.value) {
+                                currentUser.value.points = data.points_remaining;
+                            }
+                            
+                            // Also update the chapters list to reflect the purchase
+                            // by unlocking the purchased chapter in the UI
+                            if (selectedComic.value) {
+                                for (const chapter of chapters.value) {
+                                    if (chapter.chapter_id === chapterId) {
+                                        console.log(`Unlocking chapter ${chapterId} in UI`);
+                                        chapter.is_locked = false;
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            // Show success message before redirecting
+                            const successMessage = document.createElement('div');
+                            successMessage.className = 'alert alert-success';
+                            successMessage.innerHTML = `
+                                <strong>Success!</strong> Chapter purchased. Redirecting...
+                            `;
+                            
+                            if (modalBody) {
+                                modalBody.prepend(successMessage);
+                            }
+                            
+                            // Redirect after a short delay to show the success message
+                            setTimeout(() => {
+                                // Redirect to chapter reader
+                                window.location.href = data.redirect_url;
+                            }, 1000);
+                        } else if (data.status === 'insufficient_funds') {
+                            // Unlikely to happen since we check before purchase, but handle it anyway
+                            const goToSubscription = confirm(
+                                `You don't have enough points. Would you like to subscribe to get more points?`
+                            );
+                            
+                            if (goToSubscription) {
+                                window.location.href = 'subscription.html';
+                            } else {
+                                // Re-enable chapter items if staying on the page
+                                if (modalBody) {
+                                    const chapterElements = modalBody.querySelectorAll('.chapter-item');
+                                    chapterElements.forEach(item => {
+                                        item.style.pointerEvents = '';
+                                        item.style.opacity = '';
+                                    });
+                                }
+                            }
+                        } else {
+                            console.error('Unexpected response from purchase service:', data);
+                            alert('Error purchasing chapter access. Please try again.');
+                            
+                            // Re-enable chapter items
+                            if (modalBody) {
+                                const chapterElements = modalBody.querySelectorAll('.chapter-item');
+                                chapterElements.forEach(item => {
+                                    item.style.pointerEvents = '';
+                                    item.style.opacity = '';
+                                });
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error purchasing chapter:', error);
+                        alert('Error purchasing chapter. Please try again.');
+                        
+                        // Re-enable chapter items
+                        if (modalBody) {
+                            // Remove loading message
+                            const loadingMessage = modalBody.querySelector('.loading-message');
+                            if (loadingMessage) {
+                                modalBody.removeChild(loadingMessage);
+                            }
+                            
+                            const chapterElements = modalBody.querySelectorAll('.chapter-item');
+                            chapterElements.forEach(item => {
+                                item.style.pointerEvents = '';
+                                item.style.opacity = '';
+                            });
+                        }
+                    });
+                }
+
+                // Function to refresh chapters
+                async function refreshChapters() {
+                    if (!selectedComic.value) return;
+                    
+                    loadingChapters.value = true;
+                    
+                    try {
+                        // Clear the chapter data cache
+                        await fetch(`http://localhost:5015/cache/clear`, {
+                            method: 'POST'
+                        });
+                        
+                        console.log('Cache cleared, refreshing chapters');
+                        
+                        // Re-fetch chapters with updated status
+                        await readComic(selectedComic.value);
+                    } catch (error) {
+                        console.error('Error refreshing chapters:', error);
+                        alert('Failed to refresh chapter status. Please try again.');
+                    } finally {
+                        loadingChapters.value = false;
+                    }
                 }
 
                 // Initialize when the component is mounted
@@ -588,7 +982,8 @@
                     getStatusBadgeClass,
                     handleImageError,
                     readComic,
-                    openChapterPage
+                    openChapterPage,
+                    refreshChapters
                 };
             }
         }).mount('#app');
