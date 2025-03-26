@@ -98,7 +98,7 @@ def process_waitlist_and_add_to_cart():
                 notification_payload = {"user_id":user_id}
                 notification_response = requests.post(f"{NOTIFICATION_SERVICE_URL}", json=notification_payload)
 
-                if notification_response.status_code == 200:
+                if notification_response.status_code == 201:
                     print(f"✅ Notification sent to user {user_id}")
                 else:
                     print(f"❌ Failed to send notification to user {user_id}: {notification_response.status_code}")
