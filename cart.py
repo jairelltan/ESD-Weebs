@@ -63,7 +63,7 @@ def get_cart_items(user_id):
     return jsonify(cart_list)
 
 @app.route('/cart/<int:id>/<int:comic_id>', methods=['GET'])
-def get_cart_items(id, comic_id):
+def get_cart_item_hi(id, comic_id):
     conn = get_db_connection()
     if conn is None:
         return jsonify({"error": "Failed to connect to database"}), 500
