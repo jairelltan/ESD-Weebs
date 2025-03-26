@@ -1,0 +1,17 @@
+-- Create the comic database
+CREATE DATABASE IF NOT EXISTS comments_db;
+USE comments_db;
+
+-- Create the comic table
+DROP TABLE IF EXISTS comments;
+
+CREATE TABLE comments (
+    comment_id INT PRIMARY KEY AUTO_INCREMENT,
+    thread_id INT NOT NULL,
+    user_id INT NOT NULL,
+    parent_id INT,
+    content VARCHAR(1000) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    likes INT DEFAULT 0,
+    status ENUM('published', 'archived', 'deleted') DEFAULT 'published'
+);
