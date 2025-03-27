@@ -284,26 +284,46 @@
                             amount: amountInCents
                         })
                     })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.error) {
-                            alert('Error: ' + data.error);
-                            return;
-                        }
-                        
-                        // Redirect to payment page with the client secret
-                        window.location.href = `http://localhost:5017/?amount=${totalCost}&client_secret=${data.clientSecret}`;
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('An error occurred while processing your payment.');
-                    });
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.error) {
+                                alert('Error: ' + data.error);
+                                return;
+                            }
+
+                            // Redirect to payment page with the client secret
+                            window.location.href = `http://localhost:5017/?amount=${totalCost}&client_secret=${data.clientSecret}`;
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            alert('An error occurred while processing your payment.');
+                        });
                 },
 
 
                 deleteEntry(entry) {
-                    console.log(entry)
+                    const cart_id = entry.id;
+
+                    fetch(`http://127.0.0.1:5016/removefromcart/${cart_id}`, {
+                        method: 'DELETE', 
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.message) {
+                                alert(data.message); 
+                            } else if (data.error) {
+                                alert(data.error); 
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            alert('There was an error removing the item from the cart.');
+                        });
                 },
+
 
                 addToWaitlist(product) {
                     if (product.isCooldown) return;
