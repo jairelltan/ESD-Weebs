@@ -73,6 +73,79 @@ def get_threads_by_chapter(chapter_id):
     
     return jsonify(threads)
 
+# Get comment count for a thread
+@app.route('/thread/<int:thread_id>/comments/count', methods=['GET'])
+def get_thread_comment_count(thread_id):
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT COUNT(*) as count 
+        FROM comments 
+        WHERE thread_id = %s
+    """, (thread_id,))
+    
+    result = cursor.fetchone()
+    count = result['count'] if result else 0
+    
+    cursor.close()
+    conn.close()
+    
+    return jsonify({"count": count})
+
+# Update thread comment count
+@app.route('/thread/<int:thread_id>/comments/count', methods=['PUT'])
+def update_thread_comment_count(thread_id):
+    # First connect to comments_db to get the count
+    try:
+        comments_db_config = {
+            'host': 'localhost',
+            'user': 'root',
+            'password': '',
+            'database': 'comments_db'
+        }
+        
+        comments_conn = mysql.connector.connect(**comments_db_config)
+        comments_cursor = comments_conn.cursor()
+        
+        # Get current comment count from comments_db
+        comments_cursor.execute("""
+            SELECT COUNT(*) as count 
+            FROM comments 
+            WHERE thread_id = %s
+        """, (thread_id,))
+        
+        result = comments_cursor.fetchone()
+        count = result[0] if result else 0
+        
+        comments_cursor.close()
+        comments_conn.close()
+        
+        # Now connect to thread_db to update the count
+        thread_conn = get_db_connection()
+        if thread_conn is None:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        thread_cursor = thread_conn.cursor()
+        
+        # Update thread's comment count
+        thread_cursor.execute("""
+            UPDATE threads 
+            SET comment_count = %s 
+            WHERE thread_id = %s
+        """, (count, thread_id))
+        
+        thread_conn.commit()
+        thread_cursor.close()
+        thread_conn.close()
+        
+        return jsonify({"count": count})
+        
+    except mysql.connector.Error as err:
+        return jsonify({"error": str(err)}), 500
+
 # Create a new thread
 @app.route('/thread', methods=['POST'])
 def create_thread():
@@ -182,6 +255,29 @@ def update_thread_status(thread_id):
     conn.close()
 
     return jsonify({"message": "Thread status updated successfully"})
+
+# Like a thread
+@app.route('/thread/<int:thread_id>/like', methods=['POST'])
+def like_thread(thread_id):
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    cursor = conn.cursor()
+    
+    # Update thread's like count
+    cursor.execute("""
+        UPDATE threads 
+        SET likes = likes + 1 
+        WHERE thread_id = %s
+    """, (thread_id,))
+    
+    conn.commit()
+    
+    cursor.close()
+    conn.close()
+    
+    return jsonify({"message": "Thread liked successfully"})
 
 if __name__ == '__main__':
     app.run(port=5011, debug=True)

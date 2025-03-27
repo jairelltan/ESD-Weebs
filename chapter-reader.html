@@ -1098,24 +1098,172 @@
             }
             
             const threadElements = threads.map(thread => `
-                <div class="list-group-item">
+                <div class="list-group-item" data-thread-id="${thread.thread_id}">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
                             <h6 class="mb-1">${thread.title}</h6>
                             <p class="mb-1">${thread.content}</p>
                             <small class="text-muted">
                                 Posted on ${new Date(thread.create_date).toLocaleDateString()}
-                                • ${thread.likes} likes • ${thread.comment_count} comments
+                                • <span class="thread-likes">${thread.likes}</span> likes • <span class="comment-count">${thread.comment_count} comments</span>
                             </small>
                         </div>
-                        <span class="badge bg-primary rounded-pill">${thread.status}</span>
+                        <div class="d-flex align-items-center gap-2">
+                            <button class="btn btn-sm btn-outline-primary" onclick="likeThread(${thread.thread_id})">
+                                <i class="bi bi-heart"></i> Like
+                            </button>
+                            <span class="badge bg-primary rounded-pill">${thread.status}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Comments section -->
+                    <div class="mt-3">
+                        <div class="comments-list" id="comments-${thread.thread_id}">
+                            <!-- Comments will be loaded here -->
+                        </div>
+                        
+                        <!-- Comment form -->
+                        <form class="mt-2" onsubmit="createNewComment(event, ${thread.thread_id})">
+                            <div class="input-group">
+                                <textarea class="form-control form-control-sm" rows="2" placeholder="Write a comment..." required></textarea>
+                                <button type="submit" class="btn btn-primary btn-sm">Post</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             `).join('');
             
             threadsContainer.innerHTML = threadElements;
+            
+            // Load comments for each thread
+            threads.forEach(thread => {
+                loadComments(thread.thread_id);
+            });
         }
         
+        async function loadComments(threadId) {
+            try {
+                const response = await fetch(`http://localhost:5012/comments/thread/${threadId}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const comments = await response.json();
+                displayComments(threadId, comments);
+            } catch (error) {
+                console.error('Error loading comments:', error);
+                document.getElementById(`comments-${threadId}`).innerHTML = `
+                    <div class="text-danger small">Error loading comments. Please try again.</div>
+                `;
+            }
+        }
+
+        function displayComments(threadId, comments) {
+            const commentsContainer = document.getElementById(`comments-${threadId}`);
+            
+            if (!comments || comments.length === 0) {
+                commentsContainer.innerHTML = `
+                    <div class="text-muted small">No comments yet. Be the first to comment!</div>
+                `;
+                return;
+            }
+            
+            const commentElements = comments.map(comment => `
+                <div class="comment-item border-start border-2 ps-3 mb-2">
+                    <p class="mb-1">${comment.content}</p>
+                    <small class="text-muted">
+                        Posted on ${new Date(comment.created_at).toLocaleDateString()}
+                        • ${comment.likes} likes
+                    </small>
+                    <div class="mt-1">
+                        <button class="btn btn-sm btn-outline-primary btn-sm" onclick="likeComment(${comment.comment_id}, ${threadId})">
+                            <i class="bi bi-heart"></i> Like
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            
+            commentsContainer.innerHTML = commentElements;
+        }
+
+        async function createNewComment(event, threadId) {
+            event.preventDefault();
+            
+            const form = event.target;
+            const content = form.querySelector('textarea').value;
+            
+            try {
+                const response = await fetch('http://localhost:5012/comment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        thread_id: threadId,
+                        user_id: 1, // TODO: Replace with actual user ID
+                        content: content
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                // Clear form
+                form.querySelector('textarea').value = '';
+                
+                // Reload comments
+                await loadComments(threadId);
+                
+                // Update thread comment count
+                await updateThreadCommentCount(threadId);
+                
+            } catch (error) {
+                console.error('Error creating comment:', error);
+                alert('Error creating comment. Please try again.');
+            }
+        }
+
+        async function likeComment(commentId, threadId) {
+            try {
+                const response = await fetch(`http://localhost:5012/comment/${commentId}/like`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                // Reload comments to show updated like count
+                await loadComments(threadId);
+                
+            } catch (error) {
+                console.error('Error liking comment:', error);
+                alert('Error liking comment. Please try again.');
+            }
+        }
+
+        async function updateThreadCommentCount(threadId) {
+            try {
+                const response = await fetch(`http://localhost:5011/thread/${threadId}/comments/count`, {
+                    method: 'PUT'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    // Update the thread's comment count in the UI
+                    const thread = document.querySelector(`[data-thread-id="${threadId}"]`);
+                    if (thread) {
+                        const countElement = thread.querySelector('.comment-count');
+                        if (countElement) {
+                            countElement.textContent = `${data.count} comments`;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating thread comment count:', error);
+            }
+        }
+
         function showNewThreadForm() {
             document.getElementById('newThreadForm').style.display = 'block';
         }
@@ -1186,6 +1334,33 @@
                     page.classList.remove('active');
                 }
             });
+        }
+
+        // Add this new function after the existing functions
+        async function likeThread(threadId) {
+            try {
+                const response = await fetch(`http://localhost:5011/thread/${threadId}/like`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                // Update the thread's like count in the UI
+                const thread = document.querySelector(`[data-thread-id="${threadId}"]`);
+                if (thread) {
+                    const likesElement = thread.querySelector('.thread-likes');
+                    if (likesElement) {
+                        const currentLikes = parseInt(likesElement.textContent);
+                        likesElement.textContent = currentLikes + 1;
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Error liking thread:', error);
+                alert('Error liking thread. Please try again.');
+            }
         }
     </script>
     
