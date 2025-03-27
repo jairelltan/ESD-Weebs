@@ -134,13 +134,42 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        <button type="button" class="btn btn-primary" @click="proceedtoCheckout">Proceed to
-                            Checkout</button>
+                        <button type="button" class="btn btn-primary" @click="proceedtoCheckout"
+                            :disabled="paymentProcessing">
+                            {{ paymentProcessing ? 'Processing...' : 'Proceed to Checkout' }}
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- Payment Form Modal -->
+        <div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="paymentModalLabel">Payment Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="payment-form">
+                            <div class="mb-3">
+                                <h4 class="text-center mb-3">Total Amount: ${{ calculateTotal() }}</h4>
+                                <label for="card-element" class="form-label">Credit or debit card</label>
+                                <div id="card-element" class="form-control" style="height: 40px; padding-top: 10px;">
+                                </div>
+                                <div id="card-errors" class="text-danger mt-2" role="alert"></div>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary" :disabled="paymentProcessing">
+                                    {{ paymentProcessing ? 'Processing...' : 'Pay Now' }}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Stock Update Form (For Demo Purposes)-->
         <div class="container mt-5">
@@ -158,12 +187,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-
-    <script>
-
-    </script>
-
-
+    <script src="https://js.stripe.com/v3/"></script>
 
     <script>
         const app = Vue.createApp({
@@ -174,10 +198,32 @@
                     selectedProduct: null, // Store selected product for stock update
                     newStock: 0, // New stock value for the form
                     users: {},
-                    cartItems: []
+                    cartItems: [],
+                    stripe: null,
+                    elements: null,
+                    card: null,
+                    paymentProcessing: false
                 };
             },
             mounted() {
+                // Initialize Stripe
+                this.stripe = Stripe('pk_test_51R6nIRFRwiBVrzVlYE7jVVVxhXRxI8S9Vv9OagRWQqhitOwgBF1hoiOKkJr3PDZUvqaxI16rQrdMPx018CMKK9hR00dakf2erY'); // Replace with your actual publishable key
+                this.elements = this.stripe.elements();
+
+                // Create card Element and mount it
+                this.card = this.elements.create('card');
+                this.card.mount('#card-element');
+
+                // Handle validation errors
+                this.card.on('change', function (event) {
+                    const displayError = document.getElementById('card-errors');
+                    if (event.error) {
+                        displayError.textContent = event.error.message;
+                    } else {
+                        displayError.textContent = '';
+                    }
+                });
+
                 // Products
                 fetch('https://personal-dwnxuxog.outsystemscloud.com/InventoryAtomicMicroservice/rest/RESTAPI/GetAllProducts')
                     .then(response => response.json())
@@ -267,12 +313,27 @@
                         return;
                     }
 
+                    // Show the payment modal
+                    const paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
+                    paymentModal.show();
+
+                    // Handle form submission
+                    const form = document.getElementById('payment-form');
+                    form.addEventListener('submit', (event) => {
+                        event.preventDefault();
+                        this.processPayment();
+                    });
+                },
+
+                processPayment() {
                     const totalCost = this.cartItems.reduce((total, item) => {
                         return total + (item.price_per_item * item.quantity);
                     }, 0).toFixed(2);
 
                     // Convert total cost to cents for Stripe
                     const amountInCents = Math.round(parseFloat(totalCost) * 100);
+
+                    this.paymentProcessing = true;
 
                     // Create payment intent
                     fetch('http://localhost:5017/create-payment-intent', {
@@ -288,15 +349,52 @@
                         .then(data => {
                             if (data.error) {
                                 alert('Error: ' + data.error);
+                                this.paymentProcessing = false;
                                 return;
                             }
 
-                            // Redirect to payment page with the client secret
-                            window.location.href = `http://localhost:5017/?amount=${totalCost}&client_secret=${data.clientSecret}`;
+                            // Confirm the payment
+                            return this.stripe.confirmCardPayment(data.clientSecret, {
+                                payment_method: {
+                                    card: this.card,
+                                }
+                            });
                         })
-                        .catch(error => {
-                            console.error('Error:', error);
-                            alert('An error occurred while processing your payment.');
+                        .then(result => {
+                            if (result.error) {
+                                const errorElement = document.getElementById('card-errors');
+                                errorElement.textContent = result.error.message;
+                                this.paymentProcessing = false;
+                            } else {
+                                // Payment successful
+                                alert('Payment successful!');
+                                this.cartItems = [];
+
+                                const userId = this.users.id;
+                                console.log(userId)
+                                fetch(`http://localhost:5020/cart/user/bookpayment/${userId}`, {
+                                    method: 'DELETE',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                })
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        if (data.message) {
+                                            console.log('Composite service response:', data.message);
+                                            // Hide modals after composite service completion
+                                            const paymentModal = bootstrap.Modal.getInstance(document.getElementById('paymentModal'));
+                                            paymentModal.hide();
+                                            const cartModal = bootstrap.Modal.getInstance(document.getElementById('cartModal'));
+                                            cartModal.hide();
+                                        } else {
+                                            console.error('Error with composite service:', data.error);
+                                        }
+                                    })
+                                    .catch(error => {
+                                        console.error('Error calling composite service:', error);
+                                    });
+                            }
                         });
                 },
 
@@ -305,7 +403,7 @@
                     const cart_id = entry.id;
 
                     fetch(`http://127.0.0.1:5016/removefromcart/${cart_id}`, {
-                        method: 'DELETE', 
+                        method: 'DELETE',
                         headers: {
                             'Content-Type': 'application/json'
                         }
@@ -313,9 +411,9 @@
                         .then(response => response.json())
                         .then(data => {
                             if (data.message) {
-                                alert(data.message); 
+                                alert(data.message);
                             } else if (data.error) {
-                                alert(data.error); 
+                                alert(data.error);
                             }
                         })
                         .catch(error => {

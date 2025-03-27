@@ -191,6 +191,66 @@ def create_subscription_notification():
             "message": f"Internal server error: {str(e)}"
         }), 500
     
+
+# Create bookpayment success notification
+@app.route('/notification/bookpayment', methods=['POST'])
+def create_bookpayment_notification():
+    try:
+        data = request.get_json()
+        
+        # Check if all required fields are present
+        required_fields = ['user_id']
+        
+        if not all(field in data for field in required_fields):
+            return jsonify({
+                "code": 400,
+                "message": "Missing required fields"
+            }), 400
+
+        conn = get_db_connection()
+        if conn is None:
+            return jsonify({
+                "code": 500,
+                "message": "Failed to connect to database"
+            }), 500
+
+        cursor = conn.cursor()
+        
+        # Create subscription success message
+        description = f"Payment received successfully! Your books will come soon."
+        
+        # Insert new notification
+        insert_query = """
+            INSERT INTO notification 
+            (user_id, description)
+            VALUES (%s, %s)
+        """
+        
+        cursor.execute(insert_query, (
+            data['user_id'],
+            description
+        ))
+        
+        conn.commit()
+        notification_id = cursor.lastrowid
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            "code": 201,
+            "data": {
+                "notification_id": notification_id,
+                "message": "Book payment successful"
+            }
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            "code": 500,
+            "message": f"Internal server error: {str(e)}"
+        }), 500
+    
 # Create waitlist item added into notification
 @app.route('/notification/waitlist', methods=['POST'])
 def create_waitlist_notification():

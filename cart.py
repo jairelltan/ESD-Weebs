@@ -150,5 +150,25 @@ def delete_cart_entry(id):
     
     return jsonify({"message": "Cart entry deleted successfully"}), 200
 
+
+@app.route('/cart/user/<int:user_id>', methods=['DELETE'])
+def delete_all_cart_entries_for_user(user_id):
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"error": "Failed to connect to database"}), 500
+    
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM cart WHERE user_id = %s", (user_id,))
+    conn.commit()
+    
+    if cursor.rowcount == 0:
+        return jsonify({"error": "No cart entries found for the given user"}), 404
+    
+    cursor.close()
+    conn.close()
+    
+    return jsonify({"message": "All cart entries deleted successfully for user"}), 200
+
+
 if __name__ == '__main__':
     app.run(port=5008, debug=True)
