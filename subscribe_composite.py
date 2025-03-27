@@ -1,6 +1,8 @@
 from flask import Flask, request, jsonify
 import requests
 from flask_cors import CORS
+import os
+import json
 
 app = Flask(__name__)
 CORS(app)
@@ -11,6 +13,11 @@ PREMIUM_PLAN_URL = "http://localhost:5004"
 PAYMENT_URL = "http://localhost:5017"
 NOTIFICATION_URL = "http://localhost:5007"
 RECEIPT_URL = "http://localhost:5006"
+
+# Service URLs
+user_URL = os.environ.get('user_URL') or "http://localhost:5000/user"
+premium_URL = os.environ.get('premium_URL') or "http://localhost:5004/premium"
+payment_composite_URL = os.environ.get('payment_composite_URL') or "http://localhost:5021/process_payment"
 
 @app.route('/subscribe', methods=['POST'])
 def handle_subscription():
@@ -178,6 +185,129 @@ def complete_subscription():
             "code": 500,
             "message": f"Failed to complete subscription: {str(e)}"
         }), 500
+
+@app.route("/subscribe/<string:user_id>", methods=['POST'])
+def subscribe_user(user_id):
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                "code": 400,
+                "message": "Invalid JSON input: missing subscription details."
+            }), 400
+
+        required_fields = ['payment_intent_id', 'amount', 'plan']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({
+                    "code": 400,
+                    "message": f"Missing required field: {field}"
+                }), 400
+
+        payment_intent_id = data['payment_intent_id']
+        amount = data['amount']  # amount in cents
+        plan = data['plan']
+
+        # 1. Process payment through payment composite service
+        try:
+            payment_response = requests.post(
+                payment_composite_URL,
+                json={
+                    "payment_intent_id": payment_intent_id,
+                    "amount": amount,
+                    "user_id": user_id,
+                    "plan": plan
+                }
+            )
+            
+            if payment_response.status_code not in range(200, 300):
+                return jsonify({
+                    "code": 500,
+                    "message": "Payment processing failed."
+                }), 500
+                
+            payment_result = payment_response.json()
+            print(f"Payment processed successfully: {payment_result}")
+            
+        except Exception as e:
+            return jsonify({
+                "code": 500,
+                "message": f"Payment composite service error: {str(e)}"
+            }), 500
+
+        # 2. Update user's premium status
+        try:
+            premium_response = requests.post(
+                f"{premium_URL}/create",
+                json={
+                    "user_id": user_id,
+                    "plan": plan
+                }
+            )
+            
+            if premium_response.status_code not in range(200, 300):
+                return jsonify({
+                    "code": 500,
+                    "message": "Failed to update premium status."
+                }), 500
+                
+            premium_result = premium_response.json()
+            print(f"Premium status updated successfully: {premium_result}")
+            
+        except Exception as e:
+            return jsonify({
+                "code": 500,
+                "message": f"Premium service error: {str(e)}"
+            }), 500
+
+        # 3. Update user points based on the plan
+        points_to_add = 99999999 if plan.upper() in ["MONTHLY", "YEARLY"] else 0
+        
+        try:
+            user_response = requests.put(
+                f"{user_URL}/{user_id}/points",
+                json={"points": points_to_add}
+            )
+            
+            if user_response.status_code not in range(200, 300):
+                return jsonify({
+                    "code": 500,
+                    "message": "Failed to update user points."
+                }), 500
+                
+            user_result = user_response.json()
+            print(f"User points updated successfully: {user_result}")
+            
+        except Exception as e:
+            return jsonify({
+                "code": 500,
+                "message": f"User service error: {str(e)}"
+            }), 500
+
+        # Return success response
+        return jsonify({
+            "code": 200,
+            "data": {
+                "payment_intent_id": payment_intent_id,
+                "receipt_id": payment_result["data"]["receipt_id"],
+                "message": "Subscription activated successfully",
+                "points": points_to_add
+            }
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "code": 500,
+            "message": f"An error occurred while processing subscription: {str(e)}"
+        }), 500
+
+# Error handler for invalid routes
+@app.errorhandler(404)
+def page_not_found(e):
+    return jsonify({
+        "code": 404,
+        "message": "The resource was not found."
+    }), 404
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5018, debug=True) 
