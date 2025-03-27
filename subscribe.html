@@ -8,6 +8,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Stripe.js -->
+    <script src="https://js.stripe.com/v3/"></script>
     <style>
         .plan-card {
             transition: transform 0.3s;
@@ -31,6 +33,24 @@
             color: #198754;
             margin-right: 8px;
         }
+        #payment-form {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        #payment-element {
+            margin-bottom: 24px;
+        }
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px;
+            background-color: #198754;
+            color: white;
+            border-radius: 5px;
+            display: none;
+            z-index: 1000;
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -42,37 +62,61 @@
         </nav>
 
         <div class="container py-5">
-            <h1 class="text-center mb-5">Choose Your Premium Plan</h1>
-            
-            <div class="row justify-content-center g-4">
-                <div v-for="plan in plans" :key="plan.plan_id" class="col-md-4">
-                    <div class="card h-100 plan-card" 
-                         :class="{ 'selected': selectedPlan && selectedPlan.plan_id === plan.plan_id }"
-                         @click="selectPlan(plan)">
-                        <div class="card-body text-center">
-                            <h3 class="card-title">{{ plan.plan_name }}</h3>
-                            <div class="pricing my-4">
-                                <h2 class="mb-0">${{ plan.price }}</h2>
-                                <p class="text-muted">per {{ plan.duration.toLowerCase() }}</p>
+            <div v-if="!showPaymentForm">
+                <h1 class="text-center mb-5">Choose Your Premium Plan</h1>
+                
+                <div class="row justify-content-center g-4">
+                    <div v-for="plan in plans" :key="plan.plan_id" class="col-md-4">
+                        <div class="card h-100 plan-card" 
+                             :class="{ 'selected': selectedPlan && selectedPlan.plan_id === plan.plan_id }"
+                             @click="selectPlan(plan)">
+                            <div class="card-body text-center">
+                                <h3 class="card-title">{{ plan.plan_name }}</h3>
+                                <div class="pricing my-4">
+                                    <h2 class="mb-0">${{ plan.price }}</h2>
+                                    <p class="text-muted">per {{ plan.duration.toLowerCase() }}</p>
+                                </div>
+                                <ul class="feature-list">
+                                    <li v-for="feature in plan.features.split(', ')" :key="feature">
+                                        <i class="fas fa-check"></i> {{ feature }}
+                                    </li>
+                                </ul>
                             </div>
-                            <ul class="feature-list">
-                                <li v-for="feature in plan.features.split(', ')" :key="feature">
-                                    <i class="fas fa-check"></i> {{ feature }}
-                                </li>
-                            </ul>
                         </div>
                     </div>
                 </div>
+
+                <div class="text-center mt-5">
+                    <button class="btn btn-primary btn-lg px-5"
+                            :disabled="!selectedPlan"
+                            @click="proceedToCheckout">
+                        <i class="fas fa-shopping-cart me-2"></i>
+                        Proceed to Checkout
+                    </button>
+                </div>
             </div>
 
-            <div class="text-center mt-5">
-                <button class="btn btn-primary btn-lg px-5"
-                        :disabled="!selectedPlan"
-                        @click="proceedToCheckout">
-                    <i class="fas fa-shopping-cart me-2"></i>
-                    Proceed to Checkout
-                </button>
+            <div v-else>
+                <h2 class="text-center mb-4">Complete Your Purchase</h2>
+                <div class="text-center mb-4">
+                    <h4>{{ selectedPlan.plan_name }}</h4>
+                    <p class="lead">${{ selectedPlan.price }}</p>
+                </div>
+                <form id="payment-form">
+                    <div id="payment-element"></div>
+                    <button class="btn btn-primary w-100" id="submit" :disabled="isProcessing">
+                        <span v-if="isProcessing">
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            Processing...
+                        </span>
+                        <span v-else>Pay Now</span>
+                    </button>
+                </form>
             </div>
+        </div>
+
+        <div class="notification" id="notification">
+            Payment successful! You are now subscribed.
         </div>
     </div>
 
@@ -85,13 +129,17 @@
 
     <script>
         const { createApp } = Vue;
+        const stripe = Stripe('pk_test_51R6nIRFRwiBVrzVlYE7jVVVxhXRxI8S9Vv9OagRWQqhitOwgBF1hoiOKkJr3PDZUvqaxI16rQrdMPx018CMKK9hR00dakf2erY');
 
         createApp({
             data() {
                 return {
                     plans: [],
                     selectedPlan: null,
-                    error: null
+                    error: null,
+                    showPaymentForm: false,
+                    isProcessing: false,
+                    elements: null
                 };
             },
             methods: {
@@ -115,27 +163,100 @@
                     if (!this.selectedPlan) return;
                     
                     try {
-                        // Get the current user's ID from localStorage or your auth system
-                        const userId = localStorage.getItem('userId') || 1; // Default to 1 for testing
+                        const userId = localStorage.getItem('userId') || 1;
                         
-                        // Create payment intent
-                        const response = await axios.post('http://127.0.0.1:5000/create-payment-intent', {
-                            amount: this.selectedPlan.price * 100, // Convert to cents
+                        // Call subscribe composite service
+                        const response = await axios.post('http://127.0.0.1:5018/subscribe', {
                             user_id: userId,
                             plan_id: this.selectedPlan.plan_id
                         });
 
-                        if (response.data.clientSecret) {
-                            // Store the plan details for the payment page
-                            localStorage.setItem('selectedPlan', JSON.stringify(this.selectedPlan));
+                        if (response.data.code === 200) {
+                            const { client_secret } = response.data.data;
                             
-                            // Redirect to payment page with client secret
-                            window.location.href = `payment.html?client_secret=${response.data.clientSecret}`;
+                            // First show the payment form
+                            this.showPaymentForm = true;
+                            
+                            // Wait for Vue to update the DOM
+                            await this.$nextTick();
+                            
+                            // Initialize Stripe Elements
+                            this.elements = stripe.elements({
+                                clientSecret: client_secret,
+                                appearance: {
+                                    theme: 'stripe'
+                                }
+                            });
+
+                            // Make sure the element exists before mounting
+                            const paymentElement = document.getElementById('payment-element');
+                            if (paymentElement) {
+                                const element = this.elements.create('payment');
+                                element.mount('#payment-element');
+
+                                // Set up form submission
+                                const form = document.getElementById('payment-form');
+                                form.addEventListener('submit', this.handleSubmit);
+                            } else {
+                                throw new Error('Payment element not found in DOM');
+                            }
+                        } else {
+                            alert('Server Error: ' + response.data.message);
                         }
                     } catch (error) {
                         console.error('Error creating payment intent:', error);
-                        alert('Failed to process checkout. Please try again.');
+                        if (error.response) {
+                            alert('Server Error: ' + error.response.data.message);
+                        } else if (error.request) {
+                            alert('No response from server. Please check if all services are running.');
+                        } else {
+                            alert('Error: ' + error.message);
+                        }
                     }
+                },
+                async handleSubmit(e) {
+                    e.preventDefault();
+                    this.isProcessing = true;
+
+                    try {
+                        const { error, paymentIntent } = await stripe.confirmPayment({
+                            elements: this.elements,
+                            redirect: 'if_required'
+                        });
+
+                        if (error) {
+                            console.error('Payment failed:', error);
+                            alert('Payment failed: ' + error.message);
+                        } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+                            // Payment successful
+                            const userId = localStorage.getItem('userId') || 1;
+                            
+                            try {
+                                // Complete the subscription
+                                await axios.post('http://127.0.0.1:5018/subscribe/complete', {
+                                    user_id: userId,
+                                    duration: this.selectedPlan.duration,
+                                    transaction_id: paymentIntent.id
+                                });
+
+                                // Show success notification
+                                const notification = document.getElementById('notification');
+                                notification.style.display = 'block';
+                                setTimeout(() => {
+                                    notification.style.display = 'none';
+                                    window.location.href = 'comics.html';
+                                }, 3000);
+                            } catch (completeError) {
+                                console.error('Error completing subscription:', completeError);
+                                alert('Payment successful but failed to activate subscription. Please contact support.');
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error processing payment:', error);
+                        alert('Error processing payment. Please try again.');
+                    }
+
+                    this.isProcessing = false;
                 }
             },
             mounted() {
