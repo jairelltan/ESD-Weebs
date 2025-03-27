@@ -50,7 +50,6 @@ def get_composite_data(user_id, product_id):
         "quantity": 1
     }
 
-
     # Send the composite data to the cart service to add/update it
     cart_response = requests.post(CART_SERVICE_URL, json=composite_data)
     if cart_response.status_code != 200:
@@ -61,7 +60,7 @@ def get_composite_data(user_id, product_id):
 
     reduce_stock_url = REDUCE_STOCK_URL.format(InputID=product_id_to_reduce)
 
-    # Send PATCH request to reduce the stock (no quantity needed here)
+    # Send PATCH request to reduce the stock (no quantity needed here since I default it to just -1)
     patch_response = requests.patch(reduce_stock_url)
 
     if patch_response.status_code != 200:
