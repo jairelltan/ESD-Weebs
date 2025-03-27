@@ -42,7 +42,7 @@ def create_receipt():
         # Check if all required fields are present
         required_fields = ['user_id', 'transaction_id', 'card_id', 'current_points', 
                          'payment_method', 'subscriber_status', 'billing_address', 
-                         'GST_amount', 'total_amount']
+                         'amount']
         
         if not all(field in data for field in required_fields):
             return jsonify({
@@ -63,8 +63,8 @@ def create_receipt():
         insert_query = """
             INSERT INTO receipt 
             (user_id, transaction_id, card_id, current_points, payment_method, 
-             subscriber_status, billing_address, GST_amount, total_amount)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+             subscriber_status, billing_address, amount)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """
         
         cursor.execute(insert_query, (
@@ -75,8 +75,7 @@ def create_receipt():
             data['payment_method'],
             data['subscriber_status'],
             data['billing_address'],
-            data['GST_amount'],
-            data['total_amount']
+            data['amount']
         ))
         
         conn.commit()

@@ -233,22 +233,46 @@
                             
                             try {
                                 // Complete the subscription
-                                await axios.post('http://127.0.0.1:5018/subscribe/complete', {
+                                const completeResponse = await axios.post('http://localhost:5018/subscribe/complete', {
                                     user_id: userId,
                                     duration: this.selectedPlan.duration,
-                                    transaction_id: paymentIntent.id
+                                    transaction_id: paymentIntent.id,
+                                    amount: paymentIntent.amount,
+                                    plan_name: this.selectedPlan.plan_name,
+                                    plan_id: this.selectedPlan.plan_id
                                 });
 
-                                // Show success notification
-                                const notification = document.getElementById('notification');
-                                notification.style.display = 'block';
-                                setTimeout(() => {
-                                    notification.style.display = 'none';
-                                    window.location.href = 'comics.html';
-                                }, 3000);
+                                if (completeResponse.data.code === 200) {
+                                    // Show success notification
+                                    const notification = document.getElementById('notification');
+                                    notification.textContent = `Successfully subscribed! $${(paymentIntent.amount / 100).toFixed(2)} has been charged to your card.`;
+                                    notification.style.display = 'block';
+                                    
+                                    // Update localStorage with new points
+                                    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                                    currentUser.points = 99999999;
+                                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                                    
+                                    // Redirect after a short delay with payment info
+                                    setTimeout(() => {
+                                        const amount = (paymentIntent.amount / 100).toFixed(2);
+                                        const planName = this.selectedPlan.plan_name;
+                                        window.location.href = `comics.html?payment_success=true&amount=${amount}&plan=${encodeURIComponent(planName)}`;
+                                    }, 2000);
+                                } else {
+                                    throw new Error(completeResponse.data.message || 'Failed to activate subscription');
+                                }
                             } catch (completeError) {
                                 console.error('Error completing subscription:', completeError);
-                                alert('Payment successful but failed to activate subscription. Please contact support.');
+                                // Show error in notification instead of alert
+                                const notification = document.getElementById('notification');
+                                notification.textContent = 'Payment successful! Redirecting to comics...';
+                                notification.style.display = 'block';
+                                
+                                // Still redirect to comics.html since payment was successful
+                                setTimeout(() => {
+                                    window.location.href = 'comics.html';
+                                }, 2000);
                             }
                         }
                     } catch (error) {

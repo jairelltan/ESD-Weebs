@@ -249,5 +249,60 @@ def update_status(user_id):
 
     return jsonify({"message": "Status updated successfully"})
 
+@app.route('/user/<int:user_id>', methods=['PUT'])
+def update_user(user_id):
+    try:
+        user_data = request.get_json()
+        
+        # Build the SQL query dynamically based on provided fields
+        update_fields = []
+        values = []
+        
+        if "points" in user_data:
+            update_fields.append("points = %s")
+            values.append(user_data["points"])
+            
+        if "subscriber_status" in user_data:
+            update_fields.append("subscriber_status = %s")
+            values.append(user_data["subscriber_status"])
+            
+        if not update_fields:
+            return jsonify({"error": "No fields to update"}), 400
+            
+        update_query = f"""
+            UPDATE user 
+            SET {', '.join(update_fields)}
+            WHERE user_id = %s
+        """
+        values.append(user_id)
+        
+        conn = get_db_connection()
+        if conn is None:
+            return jsonify({"error": "Failed to connect to database"}), 500
+
+        cursor = conn.cursor()
+        cursor.execute(update_query, tuple(values))
+        conn.commit()
+        
+        # Fetch updated user data
+        cursor.execute("SELECT * FROM user WHERE user_id = %s", (user_id,))
+        updated_user = cursor.fetchone()
+        
+        if updated_user:
+            return jsonify({
+                "user_id": updated_user[0],
+                "name": updated_user[1],
+                "phone_number": updated_user[2],
+                "email": updated_user[3],
+                "address": updated_user[4],
+                "points": updated_user[5],
+                "subscriber_status": updated_user[6]
+            })
+        else:
+            return jsonify({"error": "User not found"}), 404
+            
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(port=5000, debug=True)

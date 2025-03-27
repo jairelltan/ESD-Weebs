@@ -10,6 +10,7 @@ USER_URL = "http://localhost:5000"
 PREMIUM_PLAN_URL = "http://localhost:5004"
 PAYMENT_URL = "http://localhost:5017"
 NOTIFICATION_URL = "http://localhost:5007"
+RECEIPT_URL = "http://localhost:5006"
 
 @app.route('/subscribe', methods=['POST'])
 def handle_subscription():
@@ -95,65 +96,87 @@ def handle_subscription():
 def complete_subscription():
     try:
         data = request.get_json()
+        print(f"Received completion data: {data}")  # Log received data
+        
         user_id = data.get('user_id')
         duration = data.get('duration')
         transaction_id = data.get('transaction_id')
+        amount = data.get('amount', 0)
+        plan_name = data.get('plan_name', 'Unknown Plan')
 
-        print(f"Completing subscription for user {user_id} with {duration} plan")
+        print(f"Processing subscription completion for user {user_id} with {duration} plan")
 
-        # Step 1: Update user points and subscription status
+        # Step 1: Get user data
+        print(f"Fetching user data from {USER_URL}/user/{user_id}")
+        user_response = requests.get(f"{USER_URL}/user/{user_id}")
+        print(f"User service response status: {user_response.status_code}")
+        print(f"User service response body: {user_response.text}")
+        
+        if user_response.status_code != 200:
+            error_msg = f"Failed to fetch user data: {user_response.text}"
+            print(error_msg)
+            return jsonify({"code": 500, "message": error_msg}), 500
+            
+        user_data = user_response.json()
+        print(f"User data retrieved: {user_data}")
+
+        # Step 2: Update user points and subscription status
         update_data = {
-            "points": 99999999,
+            "points": 99999999,  # Unlimited points
             "subscriber_status": duration.upper()  # Convert to uppercase to match enum values
         }
-        print(f"Updating user data: {update_data}")
+        print(f"Updating user data at {USER_URL}/user/{user_id} with data: {update_data}")
         user_response = requests.put(f"{USER_URL}/user/{user_id}", json=update_data)
+        print(f"User update response status: {user_response.status_code}")
+        print(f"User update response body: {user_response.text}")
+        
         if user_response.status_code != 200:
             error_msg = f"Failed to update user: {user_response.text}"
             print(error_msg)
             return jsonify({"code": 500, "message": error_msg}), 500
 
-        # Step 2: Create receipt
+        # Step 3: Create receipt
+        amount_decimal = float(amount) / 100  # Convert cents to dollars
+
         receipt_data = {
             "user_id": user_id,
             "transaction_id": transaction_id,
-            "card_id": 1,  # Default card ID
+            "card_id": 1,
             "current_points": 99999999,
             "payment_method": "CREDIT_CARD",
-            "subscriber_status": "active",
-            "billing_address": "Default Address",  # Should be gotten from user data in production
-            "GST_amount": 0.00,  # Should be calculated based on plan price
-            "total_amount": 0.00  # Should be gotten from plan price
+            "subscriber_status": duration,  # Send the duration as the status (e.g. MONTHLY, YEARLY)
+            "billing_address": user_data.get('address', 'Default Address'),
+            "amount": amount_decimal
         }
-        print(f"Creating receipt: {receipt_data}")
-        receipt_response = requests.post(f"{PAYMENT_URL}/receipt", json=receipt_data)
+        print(f"Creating receipt with data: {receipt_data}")
+        receipt_response = requests.post(f"{RECEIPT_URL}/receipt", json=receipt_data)
+        print(f"Receipt creation response status: {receipt_response.status_code}")
+        print(f"Receipt creation response body: {receipt_response.text}")
+        
         if receipt_response.status_code != 201:
-            print(f"Warning: Failed to create receipt: {receipt_response.text}")
-            # Don't return error as receipt is not critical
-
-        # Step 3: Send notification
-        notification_data = {
-            "user_id": user_id,
-            "title": "Subscription Activated",
-            "message": f"Your {duration.lower()} subscription has been activated successfully!"
-        }
-        print(f"Sending notification: {notification_data}")
-        notification_response = requests.post(f"{NOTIFICATION_URL}/notification", json=notification_data)
-        if notification_response.status_code != 201:
-            print(f"Warning: Failed to send notification: {notification_response.text}")
-            # Don't return error as notification is not critical
-
+            error_msg = f"Failed to create receipt: {receipt_response.text}"
+            print(error_msg)
+            # Don't return error as receipt is not critical, but log it
+            print("Continuing despite receipt creation failure")
+            
         return jsonify({
             "code": 200,
-            "message": "Subscription activated successfully"
+            "message": "Subscription activated successfully",
+            "data": {
+                "user_id": user_id,
+                "points": 99999999,
+                "subscriber_status": duration.upper(),
+                "transaction_id": transaction_id
+            }
         })
 
     except Exception as e:
-        error_msg = f"Failed to complete subscription: {str(e)}"
+        import traceback
+        error_msg = f"Internal server error: {str(e)}\nTraceback: {traceback.format_exc()}"
         print(error_msg)
         return jsonify({
             "code": 500,
-            "message": error_msg
+            "message": f"Failed to complete subscription: {str(e)}"
         }), 500
 
 if __name__ == '__main__':

@@ -301,6 +301,33 @@
             margin-bottom: 15px;
             font-size: 0.9rem;
         }
+        .payment-success-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            z-index: 1050;
+            display: none;
+        }
+        .payment-success-popup .success-icon {
+            color: #28a745;
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1040;
+            display: none;
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -313,7 +340,7 @@
                         <i class="fas fa-crown"></i> Subscribe
                     </button>
                     <div class="user-points me-3">
-                        <i class="bi bi-coin"></i> {{ currentUser && currentUser.points === 99999999 ? 'Unlimited' : (currentUser ? currentUser.points : '...') }} Points
+                        <i class="bi bi-coin"></i> {{ currentUser && currentUser.points >= 99999999 ? 'Unlimited' : (currentUser ? currentUser.points : '...') }} Points
                     </div>
                     <div class="dropdown">
                         <button class="btn btn-link text-white dropdown-toggle text-decoration-none" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
@@ -326,7 +353,7 @@
                                     <div class="user-name">{{ currentUser.name }}</div>
                                     <div class="user-email">{{ currentUser.email }}</div>
                                     <div class="user-points-info mt-2" v-if="currentUser.points !== undefined">
-                                        <i class="bi bi-coin"></i> <strong>{{ currentUser.points }}</strong> Points
+                                        <i class="bi bi-coin"></i> <strong>{{ currentUser.points >= 99999999 ? 'Unlimited' : currentUser.points }}</strong> Points
                                     </div>
                                 </div>
                             </li>
@@ -455,7 +482,61 @@
         </div>
     </div>
 
+    <div class="popup-overlay" id="popupOverlay"></div>
+    <div class="payment-success-popup text-center" id="paymentSuccessPopup">
+        <div class="success-icon">
+            <i class="bi bi-check-circle-fill"></i>
+        </div>
+        <h4 class="mb-3">Payment Successful!</h4>
+        <p class="mb-4" id="paymentSuccessMessage"></p>
+        <button class="btn btn-primary" id="continueReadingBtn">Continue Reading</button>
+    </div>
+
     <script>
+        // Global popup functions
+        function showPaymentSuccessPopup(amount, plan) {
+            const popup = document.getElementById('paymentSuccessPopup');
+            const overlay = document.getElementById('popupOverlay');
+            const message = document.getElementById('paymentSuccessMessage');
+            message.textContent = `$${amount} has been successfully charged to your card for the ${plan} plan.`;
+            popup.style.display = 'block';
+            overlay.style.display = 'block';
+        }
+
+        function closePaymentPopup() {
+            const popup = document.getElementById('paymentSuccessPopup');
+            const overlay = document.getElementById('popupOverlay');
+            if (popup) popup.style.display = 'none';
+            if (overlay) overlay.style.display = 'none';
+            
+            // Refresh the page to update points display
+            window.location.reload();
+        }
+
+        // Add event listeners for popup
+        document.addEventListener('DOMContentLoaded', function() {
+            const overlay = document.getElementById('popupOverlay');
+            const continueBtn = document.getElementById('continueReadingBtn');
+
+            if (overlay) {
+                overlay.addEventListener('click', closePaymentPopup);
+            }
+
+            if (continueBtn) {
+                continueBtn.addEventListener('click', closePaymentPopup);
+            }
+
+            // Check URL parameters for payment success
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('payment_success') === 'true') {
+                const amount = urlParams.get('amount');
+                const plan = urlParams.get('plan');
+                showPaymentSuccessPopup(amount, plan);
+                // Clean up the URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        });
+
         const { createApp, ref, onMounted } = Vue;
 
         createApp({
@@ -477,7 +558,18 @@
                         if (response.ok) {
                             const data = await response.json();
                             console.log('User data received:', data);
-                            currentUser.value = data;  // Remove .user since the API returns user data directly
+                            currentUser.value = data;
+                            
+                            // Force points display update
+                            if (currentUser.value.points >= 99999999) {
+                                const pointsDisplays = document.querySelectorAll('.user-points, .user-points-info');
+                                pointsDisplays.forEach(display => {
+                                    const pointsText = display.querySelector('strong') || display;
+                                    if (pointsText) {
+                                        pointsText.textContent = 'Unlimited Points';
+                                    }
+                                });
+                            }
                         } else {
                             console.error('Failed to fetch user data - Status:', response.status);
                             try {
@@ -962,7 +1054,7 @@
                 // Initialize when the component is mounted
                 onMounted(() => {
                     fetchComics();
-                    fetchUserData(); // Fetch John Doe's data
+                    fetchUserData();
                     comicModal = new bootstrap.Modal(document.getElementById('comicModal'));
                 });
 
