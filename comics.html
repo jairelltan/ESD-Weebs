@@ -308,30 +308,18 @@
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
             <div class="container">
                 <a class="navbar-brand" href="#">Comic Collection</a>
-                <div class="navbar-nav ms-auto align-items-center">
-                    <!-- User points display -->
-                    <div class="nav-item me-3" v-if="currentUser && currentUser.points !== undefined">
-                        <span class="user-points">
-                            <i class="bi bi-coin"></i> {{ currentUser.points }} Points
-                        </span>
-                    </div>
-                    <!-- Loading indicator -->
-                    <div class="nav-item me-3" v-else>
-                        <span class="text-light">
-                            <i class="bi bi-hourglass-split"></i> Loading...
-                        </span>
-                    </div>
-                    <!-- User profile section -->
-                    <div class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown">
-                            <div class="user-avatar me-2" v-if="currentUser">
-                                {{ currentUser.name ? currentUser.name.charAt(0).toUpperCase() : '' }}
-                            </div>
-                            <div class="user-avatar me-2" v-else>
-                                <i class="bi bi-person"></i>
-                            </div>
-                            {{ currentUser ? currentUser.name : 'Loading...' }}
-                        </a>
+                <div class="d-flex align-items-center">
+                    <button class="btn btn-primary me-3" @click="goToSubscribe">
+                        <i class="fas fa-crown"></i> Subscribe
+                    </button>
+                    <span class="badge bg-warning text-dark me-3">
+                        <i class="bi bi-coin"></i> 100 Points
+                    </span>
+                    <div class="dropdown">
+                        <button class="btn btn-link text-white dropdown-toggle text-decoration-none" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <span class="me-2">J</span>
+                            John Doe
+                        </button>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li v-if="currentUser">
                                 <div class="user-info">
@@ -966,6 +954,11 @@
                     }
                 }
 
+                // Function to go to subscription page
+                function goToSubscribe() {
+                    window.location.href = 'subscribe.html';
+                }
+
                 // Initialize when the component is mounted
                 onMounted(() => {
                     fetchComics();
@@ -983,7 +976,8 @@
                     handleImageError,
                     readComic,
                     openChapterPage,
-                    refreshChapters
+                    refreshChapters,
+                    goToSubscribe
                 };
             }
         }).mount('#app');
