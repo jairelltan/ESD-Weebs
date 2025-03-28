@@ -695,29 +695,8 @@
                         
                         // Process chapters to add correct locked status
                         const processedChapters = chaptersData.chapters.map(chapter => {
-                            const chapterNumber = parseFloat(chapter.chapter_number);
-                            
-                            // A chapter is unlocked if:
-                            // 1. It's chapter 1 (always accessible)
-                            // 2. It's in the reading history
-                            // 3. The previous chapter has been read
-                            let isUnlocked = false;
-                            
-                            if (chapterNumber === 1) {
-                                // First chapter is always accessible
-                                isUnlocked = true;
-                            } else if (readChapterIds.has(chapter.chapter_id)) {
-                                // Chapter is in reading history
-                                isUnlocked = true;
-                            } else {
-                                // Check if previous chapter has been read
-                                const prevChapter = chaptersData.chapters.find(c => 
-                                    parseFloat(c.chapter_number) === chapterNumber - 1);
-                                
-                                if (prevChapter && readChapterIds.has(prevChapter.chapter_id)) {
-                                    isUnlocked = true;
-                                }
-                            }
+                            // A chapter is unlocked if it's in the reading history
+                            const isUnlocked = readChapterIds.has(chapter.chapter_id);
                             
                             return {
                                 ...chapter,
@@ -764,92 +743,41 @@
 
                 // Function to open chapter in a new page
                 function openChapterPage(chapter) {
-                    const userId = currentUser.value ? currentUser.value.id : 1;
-                    
-                    // Show loading indicator or disable button
-                    const loadingMessage = document.createElement('div');
-                    loadingMessage.className = 'loading-message';
-                    loadingMessage.innerHTML = `
-                        <div class="spinner-border spinner-border-sm text-light me-2" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                        Checking chapter access...
-                    `;
-                    
-                    // Find active modal if any
-                    const modalBody = document.querySelector('.modal-body');
-                    if (modalBody) {
-                        const chapterElements = modalBody.querySelectorAll('.chapter-item');
+                    // If chapter is locked, handle the locked chapter flow
+                    if (chapter.is_locked) {
+                        // Get current user data for the locked chapter prompt
+                        const userId = currentUser.value ? currentUser.value.id : 1;
+                        const userPoints = currentUser.value ? currentUser.value.points : 0;
+                        const unlockCost = 100; // Standard unlock cost
+                        const canAfford = userPoints >= unlockCost;
                         
-                        // Disable all chapter items during check
-                        chapterElements.forEach(item => {
-                            item.style.pointerEvents = 'none';
-                            item.style.opacity = '0.7';
-                        });
+                        // Prepare data for the locked chapter handler
+                        const lockData = {
+                            can_afford: canAfford,
+                            unlock_cost: unlockCost,
+                            user_points: userPoints,
+                            chapter_id: chapter.chapter_id,
+                            chapter_number: chapter.chapter_number,
+                            comic_id: selectedComic.value ? selectedComic.value.comic_id : null,
+                            title: chapter.title
+                        };
                         
-                        // Add loading message
-                        modalBody.prepend(loadingMessage);
+                        // Show locked chapter prompt
+                        handleLockedChapter(chapter, lockData);
+                        return;
                     }
                     
-                    console.log(`Checking access for chapter ${chapter.chapter_id}, user ${userId}`);
+                    // Chapter is unlocked, navigate directly to the reader
+                    const chapterId = chapter.chapter_id;
+                    const chapterNumber = chapter.chapter_number;
+                    const title = chapter.title || '';
+                    const comicId = selectedComic.value ? selectedComic.value.comic_id : null;
                     
-                    // Call the read_comic service instead of directly navigating
-                    fetch(`http://localhost:5020/read/${chapter.chapter_id}/user/${userId}`)
-                        .then(response => {
-                            console.log('Response received:', response.status);
-                            if (!response.ok) {
-                                throw new Error(`HTTP error! status: ${response.status}`);
-                            }
-                            return response.json();
-                        })
-                        .then(data => {
-                            console.log('Access check result:', data);
-                            
-                            // Re-enable chapter items
-                            if (modalBody) {
-                                const chapterElements = modalBody.querySelectorAll('.chapter-item');
-                                chapterElements.forEach(item => {
-                                    item.style.pointerEvents = '';
-                                    item.style.opacity = '';
-                                });
-                                
-                                // Remove loading message
-                                const loadingMessage = modalBody.querySelector('.loading-message');
-                                if (loadingMessage) {
-                                    modalBody.removeChild(loadingMessage);
-                                }
-                            }
-                            
-                            if (data.is_accessible) {
-                                // If chapter is accessible, redirect to the reader
-                                window.location.href = data.redirect_url;
-                            } else if (data.status === 'locked') {
-                                // Chapter is locked, prompt for purchase
-                                handleLockedChapter(chapter, data);
-                            } else {
-                                console.error('Unexpected response from read service:', data);
-                                alert('Error accessing chapter. Please try again.');
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error checking chapter access:', error);
-                            alert('Error checking chapter access. Please try again.');
-                            
-                            // Re-enable chapter items
-                            if (modalBody) {
-                                const chapterElements = modalBody.querySelectorAll('.chapter-item');
-                                chapterElements.forEach(item => {
-                                    item.style.pointerEvents = '';
-                                    item.style.opacity = '';
-                                });
-                                
-                                // Remove loading message
-                                const loadingMessage = modalBody.querySelector('.loading-message');
-                                if (loadingMessage) {
-                                    modalBody.removeChild(loadingMessage);
-                                }
-                            }
-                        });
+                    // Construct the URL for the chapter reader
+                    const readerUrl = `chapter-reader.html?chapter_id=${chapterId}&chapter_number=${chapterNumber}&title=${encodeURIComponent(title)}&comic_id=${comicId}&purchased=true`;
+                    
+                    // Navigate to the chapter reader
+                    window.location.href = readerUrl;
                 }
                 
                 // Function to handle locked chapter prompt
@@ -964,10 +892,15 @@
                                 modalBody.prepend(successMessage);
                             }
                             
+                            // Use the redirect URL from the response if available, otherwise construct it
+                            let redirectUrl = data.redirect_url;
+                            if (!redirectUrl && data.chapter_number && data.comic_id) {
+                                redirectUrl = `chapter-reader.html?chapter_id=${chapterId}&chapter_number=${data.chapter_number}&title=${encodeURIComponent(data.title || '')}&comic_id=${data.comic_id}&purchased=true`;
+                            }
+                            
                             // Redirect after a short delay to show the success message
                             setTimeout(() => {
-                                // Redirect to chapter reader
-                                window.location.href = data.redirect_url;
+                                window.location.href = redirectUrl;
                             }, 1000);
                         } else if (data.status === 'insufficient_funds') {
                             // Unlikely to happen since we check before purchase, but handle it anyway

@@ -62,7 +62,7 @@ def verify_chapter_access(comic_id, user_id):
     Composite microservice that:
     1. Fetches all chapters for a comic
     2. Checks which chapters the user has read in history
-    3. Adds lock symbol to unread chapters based on reading order
+    3. Marks chapters as locked/unlocked based on reading history
     """
     try:
         start_time = time.time()
@@ -86,32 +86,13 @@ def verify_chapter_access(comic_id, user_id):
             if "chapter_id" in entry:
                 read_chapter_ids.add(entry["chapter_id"])
         
-        # Sort chapters by number (because we need to check previous chapters)
-        sorted_chapters = sorted(chapters, key=lambda x: float(x.get("chapter_number", 0)))
-        
         # Process chapters to add locked status
         processed_chapters = []
-        for i, chapter in enumerate(sorted_chapters):
+        for chapter in chapters:
             chapter_id = chapter.get("chapter_id")
-            chapter_number = float(chapter.get("chapter_number", 0))
             
-            # A chapter is unlocked if:
-            # 1. It's chapter 1 (always accessible)
-            # 2. It's in the reading history
-            # 3. Previous chapter has been read
-            is_unlocked = False
-            
-            if chapter_number == 1:
-                # First chapter is always accessible
-                is_unlocked = True
-            elif chapter_id in read_chapter_ids:
-                # This chapter has been read
-                is_unlocked = True
-            elif i > 0:
-                # Check if previous chapter has been read
-                prev_chapter_id = sorted_chapters[i-1].get("chapter_id")
-                if prev_chapter_id in read_chapter_ids:
-                    is_unlocked = True
+            # A chapter is unlocked if it's in the reading history
+            is_unlocked = chapter_id in read_chapter_ids
             
             chapter_data = {
                 "chapter_id": chapter_id,
@@ -142,10 +123,7 @@ def verify_chapter_access(comic_id, user_id):
 @app.route('/verify/chapter/<int:chapter_id>/user/<int:user_id>', methods=['GET'])
 def verify_single_chapter_access(chapter_id, user_id):
     """
-    Verify if a user has access to a specific chapter by checking:
-    1. If it's the first chapter (always accessible)
-    2. If user has read the previous chapter
-    3. If user has purchased this chapter
+    Verify if a user has access to a specific chapter by checking if it's in their reading history
     """
     try:
         start_time = time.time()
@@ -155,28 +133,7 @@ def verify_single_chapter_access(chapter_id, user_id):
         if not user:
             return jsonify({"error": "User not found", "is_accessible": False}), 404
         
-        # 2. Get chapter information to check if it's the first chapter
-        # and get the comic_id to find the previous chapter
-        chapter_info = None
-        try:
-            chapter_response = requests.get(f"http://localhost:5005/api/chapters/{chapter_id}")
-            if chapter_response.status_code == 200:
-                chapter_info = chapter_response.json()
-        except Exception as e:
-            print(f"Error fetching chapter info: {str(e)}")
-            # Continue processing even if chapter info fetch fails
-        
-        # If it's the first chapter, it's always accessible
-        if chapter_info and chapter_info.get("chapter_number") == "1":
-            print(f"Chapter {chapter_id} is the first chapter, granting access")
-            return jsonify({
-                "chapter_id": chapter_id,
-                "user_id": user_id,
-                "is_accessible": True,
-                "reason": "first_chapter"
-            })
-        
-        # 3. Get user's reading history
+        # 2. Get user's reading history
         user_history = get_cached_data(f"history_{user_id}", fetch_history, user_id)
         
         # Extract chapter IDs from history
@@ -185,51 +142,18 @@ def verify_single_chapter_access(chapter_id, user_id):
             if "chapter_id" in entry:
                 read_chapter_ids.add(entry["chapter_id"])
         
-        # 4. Check if this specific chapter has been read
-        if chapter_id in read_chapter_ids:
-            print(f"Chapter {chapter_id} already in reading history, granting access")
-            return jsonify({
-                "chapter_id": chapter_id,
-                "user_id": user_id,
-                "is_accessible": True,
-                "reason": "in_history"
-            })
-        
-        # 5. Check if previous chapter has been read (if this isn't chapter 1)
-        if chapter_info and chapter_info.get("chapter_number") != "1":
-            comic_id = chapter_info.get("comic_id")
-            current_chapter_number = float(chapter_info.get("chapter_number", 0))
-            
-            # Get all chapters for this comic
-            all_chapters = get_cached_data(f"chapters_{comic_id}", fetch_chapters, comic_id)
-            
-            # Find the previous chapter
-            previous_chapter = None
-            for chapter in all_chapters:
-                chapter_num = float(chapter.get("chapter_number", 0))
-                if chapter_num < current_chapter_number and (previous_chapter is None or 
-                                                           float(previous_chapter.get("chapter_number", 0)) < chapter_num):
-                    previous_chapter = chapter
-            
-            # If previous chapter exists and has been read, allow access
-            if previous_chapter and previous_chapter.get("chapter_id") in read_chapter_ids:
-                print(f"Previous chapter {previous_chapter.get('chapter_id')} has been read, granting access")
-                return jsonify({
-                    "chapter_id": chapter_id,
-                    "user_id": user_id,
-                    "is_accessible": True,
-                    "reason": "previous_chapter_read"
-                })
+        # Check if this specific chapter has been read
+        is_accessible = chapter_id in read_chapter_ids
         
         # Record performance metric
         elapsed_time = time.time() - start_time
-        print(f"Verification completed in {elapsed_time:.3f}s - Chapter {chapter_id} is not accessible")
+        print(f"Verification completed in {elapsed_time:.3f}s - Chapter {chapter_id} is {'accessible' if is_accessible else 'not accessible'}")
         
         return jsonify({
             "chapter_id": chapter_id,
             "user_id": user_id,
-            "is_accessible": False,
-            "reason": "not_in_sequence"
+            "is_accessible": is_accessible,
+            "reason": "in_history" if is_accessible else "not_in_history"
         })
             
     except Exception as e:
