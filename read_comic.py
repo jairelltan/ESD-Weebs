@@ -69,7 +69,7 @@ def process_chapter_access(chapter_id, user_id):
             return jsonify({
                 "status": "success",
                 "message": "Chapter is accessible",
-                "redirect_url": f"{CHAPTER_READER_URL}?chapter_id={chapter_id}&chapter_number={chapter_number}&title={urllib.parse.quote(chapter_title)}&comic_id={comic_id}",
+                "redirect_url": f"{CHAPTER_READER_URL}?chapter_id={chapter_id}&chapter_number={chapter_number}&title={urllib.parse.quote(chapter_title)}&comic_id={comic_id}&purchased=true",
                 "is_accessible": True
             })
         
@@ -184,11 +184,11 @@ def purchase_chapter_access(chapter_id, user_id):
             # Log warning but continue (consider a compensation transaction here in a real system)
             print(f"Warning: Failed to update history after purchase. User {user_id}, Chapter {chapter_id}")
         
-        # 5. Return success with redirect URL
+        # 5. Return success with redirect URL - add purchased=true parameter
         return jsonify({
             "status": "success",
             "message": f"Successfully purchased chapter access for {UNLOCK_COST} points",
-            "redirect_url": f"{CHAPTER_READER_URL}?chapter_id={chapter_id}&chapter_number={chapter_number}&title={urllib.parse.quote(chapter_title)}&comic_id={comic_id}",
+            "redirect_url": f"{CHAPTER_READER_URL}?chapter_id={chapter_id}&chapter_number={chapter_number}&title={urllib.parse.quote(chapter_title)}&comic_id={comic_id}&purchased=true",
             "points_remaining": points_remaining
         })
             
