@@ -17,7 +17,7 @@ RECEIPT_URL = "http://localhost:5006"
 # Service URLs
 user_URL = os.environ.get('user_URL') or "http://localhost:5000/user"
 premium_URL = os.environ.get('premium_URL') or "http://localhost:5004/premium"
-payment_composite_URL = os.environ.get('payment_composite_URL') or "http://localhost:5021/process_payment"
+payment_composite_URL = os.environ.get('payment_composite_URL') or "http://localhost:5019/process_payment"
 
 @app.route('/subscribe', methods=['POST'])
 def handle_subscription():

@@ -326,34 +326,48 @@
                 },
 
                 processPayment() {
+                    if (!this.users || !this.users.id) {
+                        alert("User ID is missing. Please log in before making a payment.");
+                        return;
+                    }
+
                     const totalCost = this.cartItems.reduce((total, item) => {
                         return total + (item.price_per_item * item.quantity);
                     }, 0).toFixed(2);
 
                     // Convert total cost to cents for Stripe
                     const amountInCents = Math.round(parseFloat(totalCost) * 100);
+                    const userId = this.users.id;
 
                     this.paymentProcessing = true;
 
-                    // Create payment intent
-                    fetch('http://localhost:5017/create-payment-intent', {
+                    fetch('http://localhost:5100/payment', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                         },
                         body: JSON.stringify({
-                            amount: amountInCents
+                            amount: amountInCents,
+                            user_id: userId,
+                            category: "book"
                         })
                     })
                         .then(response => response.json())
                         .then(data => {
                             if (data.error) {
                                 alert('Error: ' + data.error);
+                                console.error("Server Response:", data);
                                 this.paymentProcessing = false;
                                 return;
                             }
 
-                            // Confirm the payment
+                            if (!data.clientSecret) {
+                                alert('Payment initiation failed: Missing clientSecret.');
+                                console.error("Missing clientSecret in response:", data);
+                                this.paymentProcessing = false;
+                                return;
+                            }
+
                             return this.stripe.confirmCardPayment(data.clientSecret, {
                                 payment_method: {
                                     card: this.card,
@@ -361,40 +375,32 @@
                             });
                         })
                         .then(result => {
+                            if (!result) return;
+
                             if (result.error) {
-                                const errorElement = document.getElementById('card-errors');
-                                errorElement.textContent = result.error.message;
+                                document.getElementById('card-errors').textContent = result.error.message;
+                                console.error("Stripe Payment Error:", result.error);
                                 this.paymentProcessing = false;
                             } else {
                                 // Payment successful
-                                alert('Payment successful!');
+                                alert('Payment successful! Notification sent.');
+
+                                // Clear cart after payment
                                 this.cartItems = [];
 
-                                const userId = this.users.id;
-                                console.log(userId)
-                                fetch(`http://localhost:5020/cart/user/bookpayment/${userId}`, {
-                                    method: 'DELETE',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                    },
-                                })
-                                    .then(response => response.json())
-                                    .then(data => {
-                                        if (data.message) {
-                                            console.log('Composite service response:', data.message);
-                                            // Hide modals after composite service completion
-                                            const paymentModal = bootstrap.Modal.getInstance(document.getElementById('paymentModal'));
-                                            paymentModal.hide();
-                                            const cartModal = bootstrap.Modal.getInstance(document.getElementById('cartModal'));
-                                            cartModal.hide();
-                                        } else {
-                                            console.error('Error with composite service:', data.error);
-                                        }
-                                    })
-                                    .catch(error => {
-                                        console.error('Error calling composite service:', error);
-                                    });
+                                // Hide modals
+                                const paymentModal = bootstrap.Modal.getInstance(document.getElementById('paymentModal'));
+                                if (paymentModal) paymentModal.hide();
+                                const cartModal = bootstrap.Modal.getInstance(document.getElementById('cartModal'));
+                                if (cartModal) cartModal.hide();
+
+                                location.reload()
                             }
+                        })
+                        .catch(error => {
+                            console.error('Payment process error:', error);
+                            alert("An unexpected error occurred. Please try again.");
+                            this.paymentProcessing = false;
                         });
                 },
 
