@@ -192,21 +192,22 @@ def create_subscription_notification():
         }), 500
     
 
-# Create bookpayment success notification
 @app.route('/notification/bookpayment', methods=['POST'])
 def create_bookpayment_notification():
     try:
         data = request.get_json()
         
-        # Check if all required fields are present
-        required_fields = ['user_id']
-        
-        if not all(field in data for field in required_fields):
+        # Ensure required fields exist
+        if not data or 'user_id' not in data or 'description' not in data:
             return jsonify({
                 "code": 400,
-                "message": "Missing required fields"
+                "message": "Missing required fields: user_id or description"
             }), 400
 
+        user_id = data['user_id']
+        description = data['description']
+
+        # Database connection
         conn = get_db_connection()
         if conn is None:
             return jsonify({
@@ -215,25 +216,18 @@ def create_bookpayment_notification():
             }), 500
 
         cursor = conn.cursor()
-        
-        # Create subscription success message
-        description = f"Payment received successfully! Your books will come soon."
-        
-        # Insert new notification
+
+        # Insert notification into database
         insert_query = """
-            INSERT INTO notification 
-            (user_id, description)
+            INSERT INTO notification (user_id, description) 
             VALUES (%s, %s)
         """
-        
-        cursor.execute(insert_query, (
-            data['user_id'],
-            description
-        ))
+        cursor.execute(insert_query, (user_id, description))
         
         conn.commit()
         notification_id = cursor.lastrowid
-        
+
+        # Close resources
         cursor.close()
         conn.close()
         
@@ -241,16 +235,16 @@ def create_bookpayment_notification():
             "code": 201,
             "data": {
                 "notification_id": notification_id,
-                "message": "Book payment successful"
+                "message": "Payment notification created successfully"
             }
-        }), 200
-        
+        }), 201  # 201 indicates resource creation success
+
     except Exception as e:
         return jsonify({
             "code": 500,
             "message": f"Internal server error: {str(e)}"
         }), 500
-    
+
 # Create waitlist item added into notification
 @app.route('/notification/waitlist', methods=['POST'])
 def create_waitlist_notification():
