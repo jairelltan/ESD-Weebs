@@ -24,13 +24,13 @@ def get_thread_comments(thread_id):
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         
-        # Get all comments for the thread
+        # Get all comments for the thread, ordered by created_at in ascending order (oldest first)
         query = """
             SELECT c.*, 
                    (SELECT COUNT(*) FROM comments WHERE parent_id = c.comment_id) as reply_count
             FROM comments c
             WHERE c.thread_id = %s AND c.parent_id IS NULL
-            ORDER BY c.created_at DESC
+            ORDER BY c.created_at ASC
         """
         cursor.execute(query, (thread_id,))
         comments = cursor.fetchall()
