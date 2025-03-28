@@ -1,8 +1,8 @@
 -- Create the database
-CREATE DATABASE receipt;
+CREATE DATABASE receipt_db;
 
 -- Use the database
-USE receipt;
+USE receipt_db;
 
 -- Create the receipt table
 CREATE TABLE receipt (
