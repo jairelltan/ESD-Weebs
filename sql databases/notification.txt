@@ -1,8 +1,8 @@
 -- Create the database
-CREATE DATABASE notification;
+CREATE DATABASE notification_db;
 
 -- Use the database
-USE notification;
+USE notification_db;
 
 -- Create the notification table
 CREATE TABLE notification (

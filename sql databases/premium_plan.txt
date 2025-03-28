@@ -1,8 +1,8 @@
 -- Create the database
-CREATE DATABASE premium_plan;
+CREATE DATABASE premium_plan_db;
 
 -- Use the database
-USE premium_plan;
+USE premium_plan_db;
 
 -- Create the premium_plan table
 CREATE TABLE premium_plan (
