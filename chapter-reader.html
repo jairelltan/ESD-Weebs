@@ -66,9 +66,11 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
+            pointer-events: auto;
         }
         .page-by-page-mode .comic-page.active {
             display: block;
+            opacity: 1;
         }
         .page-navigation-overlay {
             position: absolute;
@@ -76,10 +78,14 @@
             height: 100%;
             width: 50%;
             cursor: pointer;
-            z-index: 3;
+            z-index: 10;
+            background-color: rgba(0,0,0,0.1);
             opacity: 0;
             transition: opacity 0.2s ease;
-            pointer-events: none;
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .page-navigation-overlay.left {
             left: 0;
@@ -87,10 +93,25 @@
         .page-navigation-overlay.right {
             right: 0;
         }
-        /* Only show overlays when hovering over the edges */
-        .page-by-page-mode .page-viewer:hover .page-navigation-overlay {
-            opacity: 0.1;
-            pointer-events: auto;
+        .nav-arrow {
+            width: 60px;
+            height: 60px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #333;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            transition: all 0.2s ease;
+        }
+        .nav-arrow:hover {
+            background-color: rgba(255, 255, 255, 0.95);
+            transform: scale(1.1);
+        }
+        .page-navigation-overlay:hover {
+            opacity: 1;
         }
         .page-indicator {
             position: absolute;
@@ -130,7 +151,7 @@
             right: 0;
             display: flex;
             justify-content: center;
-            gap: 20px;
+            gap: 100px;
             z-index: 4;
             pointer-events: auto;
         }
@@ -979,8 +1000,8 @@
             
             // Add navigation overlays for page-by-page mode
             const pageByPageNavigation = `
-                <div class="page-navigation-overlay left" id="prevPageOverlay"></div>
-                <div class="page-navigation-overlay right" id="nextPageOverlay"></div>
+                <div class="page-navigation-overlay left" id="prevPageOverlay" onclick="navigateToPrevPage()"></div>
+                <div class="page-navigation-overlay right" id="nextPageOverlay" onclick="navigateToNextPage()"></div>
                 <div class="page-indicator" id="pageIndicator">Page 1 of ${chapterData.pages.length}</div>
             `;
             
@@ -1059,18 +1080,31 @@
                 pageViewer.classList.add('page-by-page-mode');
                 
                 // Show only the current page
-                document.querySelectorAll('.comic-page').forEach((page, index) => {
-                    page.classList.toggle('active', index === currentPageIndex);
+                const pages = document.querySelectorAll('.comic-page');
+                pages.forEach((page, index) => {
+                    if (index === currentPageIndex) {
+                        page.classList.add('active');
+                        page.style.display = 'block';
+                        page.style.opacity = '1';
+                        page.style.pointerEvents = 'auto';
+                    } else {
+                        page.classList.remove('active');
+                        page.style.display = 'none';
+                        page.style.opacity = '0';
+                        page.style.pointerEvents = 'none';
+                    }
                 });
                 
-                // Show page indicator, overlays, and zoom controls
+                // Show page indicator and zoom controls
                 if (pageIndicator) {
                     updatePageIndicator();
                     pageIndicator.style.display = 'block';
                 }
                 
+                // Show navigation overlays but keep pointer-events disabled by default
                 document.querySelectorAll('.page-navigation-overlay').forEach(overlay => {
                     overlay.style.display = 'block';
+                    overlay.style.pointerEvents = 'none';
                 });
                 
                 // Show zoom controls for page mode
@@ -1084,18 +1118,23 @@
                 // Show all pages for scrolling
                 document.querySelectorAll('.comic-page').forEach(page => {
                     page.classList.add('active');
+                    page.style.display = 'block';
+                    page.style.opacity = '1';
+                    page.style.pointerEvents = 'auto';
                     // Remove any zoom in scroll mode
                     page.classList.remove('zoomed');
                     page.style.transform = '';
                 });
                 
-                // Hide page indicator, overlays, and zoom controls
+                // Hide page indicator and overlays
                 if (pageIndicator) {
                     pageIndicator.style.display = 'none';
                 }
                 
+                // Hide navigation overlays
                 document.querySelectorAll('.page-navigation-overlay').forEach(overlay => {
                     overlay.style.display = 'none';
+                    overlay.style.pointerEvents = 'none';
                 });
                 
                 // Hide zoom controls in scroll mode
@@ -1110,53 +1149,47 @@
         
         // Function to navigate to previous page
         function navigateToPrevPage() {
-            if (currentReadingMode !== 'page') return;
-            
-            const pages = document.querySelectorAll('.comic-page');
             if (currentPageIndex > 0) {
-                // Deactivate current page
-                pages[currentPageIndex].classList.remove('active');
+                const currentPage = document.querySelector('.comic-page.active');
+                const prevPage = document.querySelectorAll('.comic-page')[currentPageIndex - 1];
                 
-                // Go to previous page
-                currentPageIndex--;
-                
-                // Activate new current page
-                pages[currentPageIndex].classList.add('active');
-                
-                // Apply current zoom level to new page
-                applyZoom();
-                
-                // Update page indicator
-                updatePageIndicator();
-                
-                // Preload pages around the new current index
-                preloadNearbyPages(currentPageIndex);
+                if (currentPage && prevPage) {
+                    // Deactivate current page
+                    currentPage.style.display = 'none';
+                    currentPage.style.opacity = '0';
+                    currentPage.classList.remove('active');
+                    
+                    // Activate previous page
+                    prevPage.style.display = 'block';
+                    prevPage.style.opacity = '1';
+                    prevPage.classList.add('active');
+                    
+                    currentPageIndex--;
+                    updatePageIndicator();
+                }
             }
         }
         
         // Function to navigate to next page
         function navigateToNextPage() {
-            if (currentReadingMode !== 'page') return;
-            
-            const pages = document.querySelectorAll('.comic-page');
-            if (currentPageIndex < pages.length - 1) {
-                // Deactivate current page
-                pages[currentPageIndex].classList.remove('active');
+            if (currentPageIndex < totalPages - 1) {
+                const currentPage = document.querySelector('.comic-page.active');
+                const nextPage = document.querySelectorAll('.comic-page')[currentPageIndex + 1];
                 
-                // Go to next page
-                currentPageIndex++;
-                
-                // Activate new current page
-                pages[currentPageIndex].classList.add('active');
-                
-                // Apply current zoom level to new page
-                applyZoom();
-                
-                // Update page indicator
-                updatePageIndicator();
-                
-                // Preload pages around the new current index
-                preloadNearbyPages(currentPageIndex);
+                if (currentPage && nextPage) {
+                    // Deactivate current page
+                    currentPage.style.display = 'none';
+                    currentPage.style.opacity = '0';
+                    currentPage.classList.remove('active');
+                    
+                    // Activate next page
+                    nextPage.style.display = 'block';
+                    nextPage.style.opacity = '1';
+                    nextPage.classList.add('active');
+                    
+                    currentPageIndex++;
+                    updatePageIndicator();
+                }
             }
         }
         
