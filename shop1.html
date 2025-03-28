@@ -341,8 +341,7 @@
 
                     this.paymentProcessing = true;
 
-                    // Call Composite Microservice
-                    fetch('http://localhost:5099/process-payment', {
+                    fetch('http://localhost:5100/payment', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -394,6 +393,8 @@
                                 if (paymentModal) paymentModal.hide();
                                 const cartModal = bootstrap.Modal.getInstance(document.getElementById('cartModal'));
                                 if (cartModal) cartModal.hide();
+
+                                location.reload()
                             }
                         })
                         .catch(error => {
