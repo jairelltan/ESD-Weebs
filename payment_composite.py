@@ -93,7 +93,7 @@ def process_payment():
 
         try:
             notification_response = requests.post(
-                notification_URL + "/create",
+                notification_URL + "/notification/subscription",
                 json=notification_data
             )
             

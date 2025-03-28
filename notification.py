@@ -11,7 +11,7 @@ db_config = {
     'host': 'localhost',
     'user': 'root',
     'password': '',
-    'database': 'notification'
+    'database': 'notification_db'
 }
 
 # Function to connect to the database

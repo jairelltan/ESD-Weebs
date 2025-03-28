@@ -11,7 +11,7 @@ db_config = {
     'host': 'localhost',
     'user': 'root',
     'password': '',
-    'database': 'premium_plan'
+    'database': 'premium_plan_db'
 }
 
 # Function to connect to the database
