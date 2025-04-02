@@ -19,7 +19,6 @@ RECEIPT_URL = "http://localhost:5006"
 # Service URLs
 user_URL = os.environ.get('user_URL') or "http://localhost:5000/user"
 premium_URL = os.environ.get('premium_URL') or "http://localhost:5004/premium"
-payment_composite_URL = os.environ.get('payment_composite_URL') or "http://localhost:5019/process_payment"
 
 stripe.api_key = 'pk_test_51R6nIRFRwiBVrzVlYE7jVVxhXRxI8S9Vv9OagRWQqhitOwgBF1hoiOKkJr3PDZUvqaxI16rQrdMPx018CMKK9hR00dakf2erY'  
 
@@ -46,7 +45,6 @@ def handle_subscription():
         user_data = user_response.json()
         print(f"User data received: {user_data}")
 
-        # Step 2: Get plan details
         print(f"Fetching plan details from {PREMIUM_PLAN_URL}/premium_plan/{plan_id}")
         plan_response = requests.get(f"{PREMIUM_PLAN_URL}/premium_plan/{plan_id}")
         if plan_response.status_code != 200:

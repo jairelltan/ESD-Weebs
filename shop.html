@@ -1,79 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Comic Book Hub</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <style>
-        /* Original comic collection styles */
-        .comic-card {
-            transition: transform 0.2s;
-            height: 100%;
-        }
-        .comic-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-        .status-badge {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-        }
-        .genre-badge {
-            margin-right: 5px;
-            margin-bottom: 5px;
-        }
-        .comic-image-container {
-            width: 100%;
-            aspect-ratio: 1/1; /* Creates a perfect square */
-            overflow: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-bottom: 1rem;
-            background-color: #f8f9fa;
-            border-radius: 4px;
-            max-width: 300px; /* Limit maximum size */
-            margin-left: auto;
-            margin-right: auto;
-        }
-        .comic-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            object-position: center top;
-        }
-        .image-placeholder {
-            width: 100%;
-            aspect-ratio: 1/1; /* Creates a perfect square */
-            background-color: #f8f9fa;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #6c757d;
-            border-radius: 4px;
-            max-width: 300px; /* Limit maximum size */
-            margin-left: auto;
-            margin-right: auto;
-        }
-        .btn-read {
-            width: 100%;
-        }
-        .action-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 1rem;
-        }
+    <title>Shop</title>
 
-        /* Shop styles */
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+
+
+    <style>
         .product-image {
             width: 100%;
             height: 250px;
             object-fit: contain;
         }
+
+        /* Loading spinner styling */
         .loading-screen {
             display: flex;
             justify-content: center;
@@ -87,6 +31,7 @@
             width: 100%;
             z-index: 9999;
         }
+
         .cart-icon {
             position: fixed;
             top: 20px;
@@ -96,395 +41,407 @@
             z-index: 1000;
             cursor: pointer;
         }
+
         .modal-body {
             max-height: 400px;
             overflow-y: auto;
         }
-
-        /* Added styles for integration */
-        .tab-content {
-            padding-top: 20px;
-        }
-        .nav-tabs {
-            margin-bottom: 0;
-        }
-        .tab-pane {
-            background-color: #f8f9fa;
-            border-radius: 0 0 5px 5px;
-            padding: 20px;
-            border: 1px solid #dee2e6;
-            border-top: none;
-        }
-        .sticky-top {
-            top: 10px;
-        }
     </style>
 </head>
+
 <body>
     <div id="app">
-        <!-- Cart icon (from shop) -->
-        <div class="cart-icon" @click="toggleCartModal" v-if="activeTab === 'shop'">
+        <div class="cart-icon" @click="toggleCartModal">
             <i class="bi bi-cart-fill"></i>
-            <span class="badge bg-danger" v-if="cartItems.length > 0">{{ cartItems.length }}</span>
         </div>
-
-        <!-- Loading Screen (from shop) -->
+        <!-- Loading Screen -->
         <div v-if="loading" class="loading-screen">
             <div class="spinner-border text-light" role="status">
                 <span class="visually-hidden">Loading...</span>
             </div>
         </div>
 
-        <!-- Navigation Tabs (New) -->
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-            <div class="container">
-                <a class="navbar-brand" href="#">Comic Book Hub</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav">
-                        <li class="nav-item">
-                            <a class="nav-link" :class="{ active: activeTab === 'comics' }" href="#" 
-                               @click.prevent="activeTab = 'comics'">Comics</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" :class="{ active: activeTab === 'shop' }" href="#" 
-                               @click.prevent="activeTab = 'shop'">Shop</a>
-                        </li>
-                    </ul>
-                </div>
-                <div class="text-light" v-if="users.name">
-                    <span>{{ users.name }} | </span>
-                    <span>Points: {{ users.points }}</span>
-                </div>
+        <!-- Welcome Section -->
+        <div class="container mt-3">
+            <div class="bg-light p-5 rounded text-center">
+                <h1 class="display-4">Welcome to the Shop!</h1>
+                <p class="lead">Buy books to support your favourite comic book creators.</p>
+                <p> You are: {{users.name}}</p>
+                <p> Points: {{users.points}}</p>
+                <hr class="my-4">
+                <p>If the book is out of stock, try out the preorder function!</p>
             </div>
-        </nav>
+        </div>
 
-        <!-- Tab Content (New) -->
-        <div class="tab-content">
-            <!-- Comics Tab -->
-            <div class="tab-pane" :class="{ 'show active': activeTab === 'comics' }">
-                <div class="container mt-4">
-                    <h2 class="mb-4">Available Comics</h2>
-                    <div class="row" id="comics-container">
-                        <!-- Error handling -->
-                        <div v-if="comicError" class="col-12 text-center">
-                            <div class="alert alert-danger" role="alert">
-                                Error loading comics. Please make sure the comic service is running on port 5002.
-                                <br>
-                                Error details: {{ comicError }}
-                                <br>
-                                <small>Check the browser console (F12) for more details.</small>
-                            </div>
-                        </div>
+        <!-- Products Section -->
+        <div class="container mt-5" v-if="!loading">
+            <div class="row">
+                <div class="col-md-4" v-for="product in products" :key="product.Id">
+                    <div class="card mb-4" @click="selectProduct(product)">
+                        <img :src="`data:image/jpeg;base64,${product.image}`" class="card-img-top product-image"
+                            alt="Product Image">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ product.comic_name }} - Volume {{ product.volume_name }}</h5>
+                            <p class="card-text">Price: ${{ product.price_per_item.toFixed(2) }}</p>
+                            <p class="card-text">Stock: {{ product.quantity_in_stock }} available</p>
 
-                        <!-- No comics found message -->
-                        <div v-else-if="comics.length === 0 && !comicLoading" class="col-12 text-center">
-                            <div class="alert alert-info" role="alert">
-                                No comics found in the database.
-                            </div>
-                        </div>
-
-                        <!-- Loading message -->
-                        <div v-else-if="comicLoading" class="col-12 text-center">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Loading...</span>
-                            </div>
-                        </div>
-
-                        <!-- Comic cards -->
-                        <div v-else v-for="comic in comics" :key="comic.comic_id" class="col-md-4 mb-4">
-                            <div class="card comic-card">
-                                <div class="card-body">
-                                    <span class="badge status-badge" :class="getStatusBadgeClass(comic.status)">
-                                        {{ comic.status }}
-                                    </span>
-                                    <h5 class="card-title">{{ comic.comic_name }}</h5>
-                                    <h6 class="card-subtitle mb-2 text-muted">By {{ comic.author }}</h6>
-                                    
-                                    <div v-if="comic.comic_art" class="comic-image-container">
-                                        <img 
-                                            :src="`data:image/webp;base64,${comic.comic_art}`" 
-                                            class="comic-image" 
-                                            :alt="comic.comic_name"
-                                            @error="handleImageError($event)"
-                                        >
-                                    </div>
-                                    <div v-else class="image-placeholder">
-                                        <span>No image available</span>
-                                    </div>
-                                    
-                                    <div class="mb-3">
-                                        <span 
-                                            v-for="(genre, index) in comic.genre" 
-                                            :key="index"
-                                            class="badge bg-secondary genre-badge"
-                                        >
-                                            {{ genre }}
-                                        </span>
-                                    </div>
-                                    <p class="card-text">{{ comic.description }}</p>
-                                    
-                                    <div class="action-buttons">
-                                        <button class="btn btn-primary" @click="readComic(comic.comic_id)">
-                                            <i class="bi bi-book"></i> Read
-                                        </button>
-                                       
-                                    </div>
-                                </div>
-                            </div>
+                            <!-- Button Text based on stock availability -->
+                            <button class="btn btn-primary" :disabled="product.isCooldown"
+                                @click="product.quantity_in_stock > 0 ? addToCart(product) : addToWaitlist(product)">
+                                {{ product.quantity_in_stock > 0 ? 'Purchase' : 'Join Waitlist' }}
+                            </button>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Shop Tab -->
-            <div class="tab-pane" :class="{ 'show active': activeTab === 'shop' }">
-                <!-- Welcome Section -->
-                <div class="container mt-3">
-                    <div class="bg-light p-5 rounded text-center">
-                        <h1 class="display-4">Welcome to the Shop!</h1>
-                        <p class="lead">Buy books to support your favourite comic book creators.</p>
-                        <hr class="my-4">
-                        <p>If the book is out of stock, try out the preorder function!</p>
-                    </div>
-                </div>
-
-                <!-- Products Section -->
-                <div class="container mt-5" v-if="!loading">
-                    <div class="row">
-                        <div class="col-md-4" v-for="product in products" :key="product.Id">
-                            <div class="card mb-4" @click="selectProduct(product)">
-                                <img :src="`data:image/jpeg;base64,${product.image}`" class="card-img-top product-image"
-                                    alt="Product Image">
-                                <div class="card-body">
-                                    <h5 class="card-title">{{ product.comic_name }} - Volume {{ product.volume_name }}</h5>
-                                    <p class="card-text">Price: ${{ product.price_per_item.toFixed(2) }}</p>
-                                    <p class="card-text">Stock: {{ product.quantity_in_stock }} available</p>
-
-                                    <!-- Button Text based on stock availability -->
-                                    <button class="btn btn-primary"
-                                        @click="product.quantity_in_stock > 0 ? addToCart(product) : addToWaitlist(product)">
-                                        {{ product.quantity_in_stock > 0 ? 'Purchase' : 'Join Waitlist' }}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Stock Update Form (For Demo Purposes)-->
-                <div class="container mt-5">
-                    <h2 v-if="selectedProduct">Update Stock for {{ selectedProduct.comic_name }} - Volume {{
-                        selectedProduct.volume_name }}</h2>
-                    <form @submit.prevent="updateStock">
-                        <div class="mb-3">
-                            <label for="stock" class="form-label">New Stock Quantity</label>
-                            <input type="number" id="stock" class="form-control" v-model="newStock" min="0" required>
-                        </div>
-                        <button type="submit" class="btn btn-success" :disabled="selectedProduct === null">Update Stock</button>
-                    </form>
                 </div>
             </div>
         </div>
 
-        <!-- Cart Modal (New) -->
         <div class="modal fade" id="cartModal" tabindex="-1" aria-labelledby="cartModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title" id="cartModalLabel">Your Cart</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <div v-if="cartItems.length === 0" class="text-center p-3">
-                            Your cart is empty
+                        <div v-if="cartItems.length > 0">
+                            <ul class="list-group">
+                                <li class="list-group-item" v-for="item in cartItems" :key="item.id">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="col-4">
+                                            <p>{{ item.comic_name }} - Volume {{ item.comic_volume }}</p>
+                                        </div>
+                                        <div class="col-2">
+                                            <p>Quantity: {{ item.quantity }}</p>
+                                        </div>
+                                        <div class="co-2">
+                                            <p>Price per item: {{ item.price_per_item }}</p>
+                                        </div>
+                                        <div class="col-2">
+                                            <p><strong>Total: {{ (item.price_per_item * item.quantity).toFixed(2)
+                                                    }}</strong></p>
+                                        </div>
+                                        <div class="col-auto">
+                                            <i class="bi bi-trash text-danger" @click="deleteEntry(item)"></i>
+                                        </div>
+                                    </div>
+                                </li>
+                            </ul>
                         </div>
                         <div v-else>
-                            <div v-for="(item, index) in cartItems" :key="index" class="d-flex align-items-center mb-3 p-2 border-bottom">
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-0">{{ item.comic_name }} - Volume {{ item.volume_name }}</h6>
-                                    <small class="text-muted">Price: ${{ item.price_per_item.toFixed(2) }}</small>
-                                </div>
-                                <button class="btn btn-sm btn-danger" @click="removeFromCart(index)">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center mt-3">
-                                <h6>Total: ${{ cartTotal.toFixed(2) }}</h6>
-                                <button class="btn btn-success" @click="checkout">Checkout</button>
-                            </div>
+                            <p>Your cart is empty.</p>
                         </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" @click="proceedtoCheckout"
+                            :disabled="paymentProcessing">
+                            {{ paymentProcessing ? 'Processing...' : 'Proceed to Checkout' }}
+                        </button>
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Payment Form Modal -->
+        <div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="paymentModalLabel">Payment Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="payment-form">
+                            <div class="mb-3">
+                                <h4 class="text-center mb-3">Total Amount: ${{ calculateTotal() }}</h4>
+                                <label for="card-element" class="form-label">Credit or debit card</label>
+                                <div id="card-element" class="form-control" style="height: 40px; padding-top: 10px;">
+                                </div>
+                                <div id="card-errors" class="text-danger mt-2" role="alert"></div>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary" :disabled="paymentProcessing">
+                                    {{ paymentProcessing ? 'Processing...' : 'Pay Now' }}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stock Update Form (For Demo Purposes)-->
+        <div class="container mt-5">
+            <h2 v-if="selectedProduct">Update Stock for {{ selectedProduct.comic_name }} - Volume {{
+                selectedProduct.volume_name }}</h2>
+            <form @submit.prevent="updateStock">
+                <div class="mb-3">
+                    <label for="stock" class="form-label">New Stock Quantity</label>
+                    <input type="number" id="stock" class="form-control" v-model="newStock" min="0" required>
+                </div>
+                <button type="submit" class="btn btn-success" :disabled="selectedProduct === null">Update Stock</button>
+            </form>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://js.stripe.com/v3/"></script>
 
     <script>
         const app = Vue.createApp({
             data() {
                 return {
-                    // Shared data
-                    loading: true,
+                    products: [], // Empty array to store products
+                    loading: true, // Set loading state to true initially
+                    selectedProduct: null, // Store selected product for stock update
+                    newStock: 0, // New stock value for the form
                     users: {},
-                    activeTab: 'comics',
-                    
-                    // Comic collection data
-                    comics: [],
-                    comicLoading: true,
-                    comicError: null,
-                    
-                    // Shop data
-                    products: [],
-                    selectedProduct: null,
-                    newStock: 0,
                     cartItems: [],
-                    cartModal: null
+                    stripe: null,
+                    elements: null,
+                    card: null,
+                    paymentProcessing: false
                 };
             },
-            computed: {
-                cartTotal() {
-                    return this.cartItems.reduce((total, item) => total + item.price_per_item, 0);
-                }
-            },
             mounted() {
-                // Initialize the cart modal
-                this.cartModal = new bootstrap.Modal(document.getElementById('cartModal'));
-                
-                // Fetch user data
-                this.fetchUserData();
-                
-                // Fetch comics data
-                this.fetchComics();
-                
-                // Fetch shop products data
-                this.fetchProducts();
+                // Initialize Stripe
+                this.stripe = Stripe('pk_test_51R6nIRFRwiBVrzVlYE7jVVVxhXRxI8S9Vv9OagRWQqhitOwgBF1hoiOKkJr3PDZUvqaxI16rQrdMPx018CMKK9hR00dakf2erY'); // Replace with your actual publishable key
+                this.elements = this.stripe.elements();
+
+                // Create card Element and mount it
+                this.card = this.elements.create('card');
+                this.card.mount('#card-element');
+
+                // Handle validation errors
+                this.card.on('change', function (event) {
+                    const displayError = document.getElementById('card-errors');
+                    if (event.error) {
+                        displayError.textContent = event.error.message;
+                    } else {
+                        displayError.textContent = '';
+                    }
+                });
+
+                // Products
+                fetch('https://personal-dwnxuxog.outsystemscloud.com/InventoryAtomicMicroservice/rest/RESTAPI/GetAllProducts')
+                    .then(response => response.json())
+                    .then(data => {
+                        this.products = data.Products; // Store products from API in Vue data
+                        this.loading = false; // Set loading to false when data is loaded
+                    })
+                    .catch(error => {
+                        console.error('Error fetching products:', error);
+                        this.loading = false; // Set loading to false in case of an error
+                    });
+
+                // User
+                fetch('http://localhost:5000/user/1')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data) {
+                            this.users = {
+                                id: data.id,
+                                name: data.name,
+                                phone: data.phone,
+                                email: data.email,
+                                address: data.address,
+                                points: data.points,
+                                status: data.status
+                            };
+                        } else {
+                            console.error('No data returned for the user with ID 1');
+                        }
+                        this.loading = false;
+                    })
+                    .catch(error => {
+                        console.error('Error fetching user data:', error);
+                        this.loading = false;
+                    });
             },
             methods: {
-                // Shared methods
-                fetchUserData() {
-                    fetch('http://localhost:5000/user/1')
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data) {
-                                this.users = {
-                                    id: data.id,
-                                    name: data.name,
-                                    phone: data.phone,
-                                    email: data.email,
-                                    address: data.address,
-                                    points: data.points,
-                                    status: data.status
-                                };
-                            } else {
-                                console.error('No data returned for the user with ID 1');
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error fetching user data:', error);
-                        })
-                        .finally(() => {
-                            this.loading = false;
-                        });
-                },
-                
-                // Comic collection methods
-                fetchComics() {
-                    this.comicLoading = true;
-                    console.log('Attempting to fetch comics from http://localhost:5002/comic');
-                    fetch('http://localhost:5002/comic')
-                        .then(response => {
-                            console.log('Response status:', response.status);
-                            if (!response.ok) {
-                                return response.text().then(text => {
-                                    throw new Error(`HTTP error! status: ${response.status}, message: ${text}`);
-                                });
-                            }
-                            return response.json();
-                        })
-                        .then(data => {
-                            this.comics = data;
-                            console.log('Received comics:', this.comics);
-                        })
-                        .catch(error => {
-                            console.error('Error fetching comics:', error);
-                            this.comicError = error.message;
-                        })
-                        .finally(() => {
-                            this.comicLoading = false;
-                        });
-                },
-                readComic(comicId) {
-                    console.log(`Reading comic with ID: ${comicId}`);
-                    window.location.href = `chapters.html?comic_id=${comicId}`;
-                },
-                getStatusBadgeClass(status) {
-                    switch(status.toLowerCase()) {
-                        case 'ongoing':
-                            return 'bg-success';
-                        case 'completed':
-                            return 'bg-primary';
-                        case 'hiatus':
-                            return 'bg-warning';
-                        default:
-                            return 'bg-secondary';
-                    }
-                },
-                handleImageError(event) {
-                    console.error('Error loading image');
-                    event.target.src = 'images/placeholder.webp';
-                },
-                
-                // Shop methods
-                fetchProducts() {
-                    fetch('https://personal-dwnxuxog.outsystemscloud.com/InventoryAtomicMicroservice/rest/RESTAPI/GetAllProducts')
-                        .then(response => response.json())
-                        .then(data => {
-                            this.products = data.Products;
-                        })
-                        .catch(error => {
-                            console.error('Error fetching products:', error);
-                        })
-                        .finally(() => {
-                            this.loading = false;
-                        });
-                },
+                // Set selected product and its stock to be updated (Demo Purposes Only!)
                 selectProduct(product) {
                     this.selectedProduct = product;
-                    this.newStock = product.quantity_in_stock;
+                    this.newStock = product.quantity_in_stock; // Pre-fill the stock input with the current stock
                 },
+
+
+                // Add product to cart
                 addToCart(product) {
+
                     console.log(`${product.comic_name} - Volume ${product.volume_name} - ${this.users.name} of id ${this.users.id} clicked on Add to Cart!`);
-                    
-                    // Add to visual cart (new functionality)
-                    this.cartItems.push({...product});
-                    
-                    // Original functionality
-                    const url = `http://localhost:5002/composite/${this.users.id}/${product.Id}`;
-                    fetch(url, {
-                        method: 'GET',
-                    })
+                    alert(`${product.comic_name} added to cart!`)
+                    const url = `http://localhost:5009/addtocart/${this.users.id}/${product.Id}`;
+
+                    // I dont want them to spam
+                    product.isCooldown = true;
+                    setTimeout(() => {
+                        product.isCooldown = false;
+                    }, 1500);
+
+                    // Send a GET request to the backend
+                    fetch(url, { method: 'GET' })
                         .then(response => response.json())
                         .then(data => {
                             console.log('Received data:', data);
+
+                            // Reduce stock immediately to prevent spam clicks
+                            product.quantity_in_stock--;
+
+                            // Disable the button if stock is depleted
+                            if (product.quantity_in_stock <= 0) {
+                                product.outOfStock = true; // Flag to disable the button
+                            }
                         })
                         .catch(error => {
                             console.error('Error adding to cart:', error);
                             alert('Error adding to cart. Please try again.');
                         });
                 },
+
+                calculateTotal() {
+                    return this.cartItems.reduce((total, item) => {
+                        return total + (item.price_per_item * item.quantity);
+                    }, 0).toFixed(2);
+                },
+
+                proceedtoCheckout() {
+                    if (this.cartItems.length === 0) {
+                        alert("Your cart is empty!");
+                        return;
+                    }
+
+                    // Show the payment modal
+                    const paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
+                    paymentModal.show();
+
+                    // Handle form submission
+                    const form = document.getElementById('payment-form');
+                    form.addEventListener('submit', (event) => {
+                        event.preventDefault();
+                        this.processPayment();
+                    });
+                },
+
+                processPayment() {
+                    if (!this.users || !this.users.id) {
+                        alert("User ID is missing. Please log in before making a payment.");
+                        return;
+                    }
+
+                    const totalCost = this.cartItems.reduce((total, item) => {
+                        return total + (item.price_per_item * item.quantity);
+                    }, 0).toFixed(2);
+
+                    // Convert total cost to cents for Stripe
+                    const amountInCents = Math.round(parseFloat(totalCost) * 100);
+                    const userId = this.users.id;
+
+                    this.paymentProcessing = true;
+
+                    fetch('http://localhost:5100/payment', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            amount: amountInCents,
+                            user_id: userId,
+                            category: "book"
+                        })
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.error) {
+                                alert('Error: ' + data.error);
+                                console.error("Server Response:", data);
+                                this.paymentProcessing = false;
+                                return;
+                            }
+
+                            if (!data.clientSecret) {
+                                alert('Payment initiation failed: Missing clientSecret.');
+                                console.error("Missing clientSecret in response:", data);
+                                this.paymentProcessing = false;
+                                return;
+                            }
+
+                            return this.stripe.confirmCardPayment(data.clientSecret, {
+                                payment_method: {
+                                    card: this.card,
+                                }
+                            });
+                        })
+                        .then(result => {
+                            if (!result) return;
+
+                            if (result.error) {
+                                document.getElementById('card-errors').textContent = result.error.message;
+                                console.error("Stripe Payment Error:", result.error);
+                                this.paymentProcessing = false;
+                            } else {
+                                // Payment successful
+                                alert('Payment successful! Notification sent.');
+
+                                // Clear cart after payment
+                                this.cartItems = [];
+
+                                // Hide modals
+                                const paymentModal = bootstrap.Modal.getInstance(document.getElementById('paymentModal'));
+                                if (paymentModal) paymentModal.hide();
+                                const cartModal = bootstrap.Modal.getInstance(document.getElementById('cartModal'));
+                                if (cartModal) cartModal.hide();
+
+                                location.reload()
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Payment process error:', error);
+                            alert("An unexpected error occurred. Please try again.");
+                            this.paymentProcessing = false;
+                        });
+                },
+
+
+                deleteEntry(entry) {
+                    const cart_id = entry.id;
+
+                    fetch(`http://127.0.0.1:5016/removefromcart/${cart_id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.message) {
+                                alert(data.message);
+                            } else if (data.error) {
+                                alert(data.error);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            alert('There was an error removing the item from the cart.');
+                        });
+                },
+
+
                 addToWaitlist(product) {
+                    if (product.isCooldown) return;
+
+                    product.isCooldown = true;
+                    setTimeout(() => {
+                        product.isCooldown = false;
+                    }, 1500);
+
+                    alert(`${product.comic_name} added to waitlist!`)
                     console.log(`${product.comic_name} - Volume ${product.volume_name} - ${this.users.name} id ${this.users.id} clicked on Join Waitlist!`);
 
-                    // Construct URL with the user_id and product_id
-                    const url = `http://localhost:5002/composite/${this.users.id}/${product.Id}`;
+                    const url = `http://localhost:5002/addtowishlist/${this.users.id}/${product.Id}`;
 
-                    // Send a GET request to the backend
                     fetch(url, {
                         method: 'GET',
                     })
@@ -497,6 +454,25 @@
                             alert('Error adding to waitlist. Please try again.');
                         });
                 },
+
+                toggleCartModal() {
+                    this.fetchCartItems();
+                    const cartModal = new bootstrap.Modal(document.getElementById('cartModal'));
+                    cartModal.show();
+                },
+
+                fetchCartItems() {
+                    fetch(`http://localhost:5008/cart/${this.users.id}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            this.cartItems = data;
+                        })
+                        .catch(error => {
+                            console.error('Error fetching cart items:', error);
+                        });
+                },
+
+                // Update stock using the API (FOR DEMO)
                 updateStock() {
                     const updatedProduct = {
                         ...this.selectedProduct,
@@ -522,23 +498,12 @@
                             alert('Error updating stock. Please try again.');
                         });
                 },
-                
-                // Cart methods (new)
-                toggleCartModal() {
-                    this.cartModal.toggle();
-                },
-                removeFromCart(index) {
-                    this.cartItems.splice(index, 1);
-                },
-                checkout() {
-                    alert('Checkout functionality would go here!');
-                    this.cartItems = [];
-                    this.cartModal.hide();
-                }
             }
-        });
+        })
+
 
         app.mount('#app');
     </script>
 </body>
+
 </html>
