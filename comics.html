@@ -782,59 +782,116 @@
                 
                 // Function to handle locked chapter prompt
                 function handleLockedChapter(chapter, data) {
-                    // Check if user can afford to purchase
-                    if (data.can_afford) {
-                        // User has enough points, ask if they want to purchase
-                        const confirmPurchase = confirm(
-                            `This chapter is locked. Would you like to unlock it for ${data.unlock_cost} points? ` +
-                            `\n\nYou currently have ${data.user_points} points.`
-                        );
-                        
-                        if (confirmPurchase) {
-                            purchaseChapter(chapter.chapter_id, data);
-                        }
-                    } else {
-                        // User doesn't have enough points, prompt to subscribe
-                        const goToSubscription = confirm(
-                            `This chapter is locked and requires ${data.unlock_cost} points to unlock. ` +
-                            `\n\nYou currently have ${data.user_points} points, which is not enough. ` +
-                            `\n\nWould you like to subscribe to get more points?`
-                        );
-                        
-                        if (goToSubscription) {
-                            window.location.href = 'subscription.html';
-                        }
+                    // Close any existing modal
+                    if (comicModal) {
+                        comicModal.hide();
                     }
+                    
+                    // Create purchase dialog element
+                    const purchaseDialog = document.createElement('div');
+                    purchaseDialog.className = 'modal fade';
+                    purchaseDialog.id = 'purchaseModal';
+                    purchaseDialog.setAttribute('tabindex', '-1');
+                    purchaseDialog.setAttribute('aria-labelledby', 'purchaseModalLabel');
+                    purchaseDialog.setAttribute('aria-hidden', 'true');
+                    
+                    purchaseDialog.innerHTML = `
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content" style="background-color: #fff9db; border-radius: 8px;">
+                                <div class="modal-header border-0">
+                                    <h5 class="modal-title" id="purchaseModalLabel" style="color: #664d00;">Chapter Locked</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body text-center">
+                                    <p style="margin-bottom: 20px;">You need to unlock this chapter first to read it.</p>
+                                    <hr style="border: none; border-top: 1px solid #e6d292; margin: 20px 0;">
+                                    
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                        <span>Chapter ${chapter.chapter_number}${chapter.title ? ': ' + chapter.title : ''}</span>
+                                        <span style="background-color: #0d6efd; color: white; padding: 5px 10px; border-radius: 20px; font-size: 14px;">${data.unlock_cost} points</span>
+                                    </div>
+                                    
+                                    <div style="margin-bottom: 25px;">
+                                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                            <span>Your balance:</span>
+                                            <span style="font-weight: bold;">${data.user_points} points</span>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between;">
+                                            <span>After purchase:</span>
+                                            <span style="font-weight: bold; ${data.can_afford ? 'color: #664d00' : 'color: #dc3545'}">${data.user_points - data.unlock_cost} points</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer border-0 d-flex flex-column">
+                                    ${data.can_afford 
+                                        ? `<button id="purchaseBtn" class="btn btn-success w-100 mb-2 d-flex align-items-center justify-content-center">
+                                            <i class="bi bi-unlock me-2"></i> Unlock for ${data.unlock_cost} points
+                                           </button>`
+                                        : `<button disabled class="btn btn-danger w-100 mb-2 d-flex align-items-center justify-content-center" style="opacity: 0.8;">
+                                            <i class="bi bi-exclamation-triangle me-2"></i> Insufficient points
+                                           </button>
+                                           <a href="subscription.html" class="btn btn-primary w-100 mb-2 d-flex align-items-center justify-content-center">
+                                            <i class="bi bi-plus-circle me-2"></i> Get More Points
+                                           </a>`
+                                    }
+                                    <button type="button" class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center" data-bs-dismiss="modal">
+                                        <i class="bi bi-x me-2"></i> Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Add the dialog to the document
+                    document.body.appendChild(purchaseDialog);
+                    
+                    // Initialize and show the modal
+                    const purchaseModal = new bootstrap.Modal(document.getElementById('purchaseModal'));
+                    purchaseModal.show();
+                    
+                    // Add event listener for purchase button
+                    if (data.can_afford) {
+                        document.getElementById('purchaseBtn').addEventListener('click', () => {
+                            purchaseModal.hide();
+                            purchaseChapter(chapter.chapter_id, data);
+                        });
+                    }
+                    
+                    // Clean up when the modal is hidden
+                    document.getElementById('purchaseModal').addEventListener('hidden.bs.modal', function () {
+                        document.body.removeChild(document.getElementById('purchaseModal'));
+                    });
                 }
                 
                 // Function to purchase chapter access
                 function purchaseChapter(chapterId, data) {
                     const userId = currentUser.value ? currentUser.value.id : 1;
                     
-                    // Show loading indicator
-                    const loadingMessage = document.createElement('div');
-                    loadingMessage.className = 'loading-message';
-                    loadingMessage.innerHTML = `
-                        <div class="spinner-border spinner-border-sm text-light me-2" role="status">
-                            <span class="visually-hidden">Loading...</span>
+                    // Create and show processing dialog
+                    const processingDialog = document.createElement('div');
+                    processingDialog.className = 'modal fade';
+                    processingDialog.id = 'processingModal';
+                    processingDialog.setAttribute('tabindex', '-1');
+                    processingDialog.setAttribute('data-bs-backdrop', 'static');
+                    processingDialog.setAttribute('data-bs-keyboard', 'false');
+                    
+                    processingDialog.innerHTML = `
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-body text-center py-4">
+                                    <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <h5>Processing Purchase</h5>
+                                    <p class="text-muted">Please wait while we process your purchase...</p>
+                                </div>
+                            </div>
                         </div>
-                        Processing purchase...
                     `;
                     
-                    // Find active modal if any
-                    const modalBody = document.querySelector('.modal-body');
-                    if (modalBody) {
-                        const chapterElements = modalBody.querySelectorAll('.chapter-item');
-                        
-                        // Disable all chapter items during processing
-                        chapterElements.forEach(item => {
-                            item.style.pointerEvents = 'none';
-                            item.style.opacity = '0.7';
-                        });
-                        
-                        // Add loading message
-                        modalBody.prepend(loadingMessage);
-                    }
+                    document.body.appendChild(processingDialog);
+                    const processingModal = new bootstrap.Modal(document.getElementById('processingModal'));
+                    processingModal.show();
                     
                     console.log(`Purchasing chapter ${chapterId} for user ${userId}`);
                     
@@ -854,23 +911,19 @@
                     .then(data => {
                         console.log('Purchase result:', data);
                         
-                        // Re-enable chapter items
-                        if (modalBody) {
-                            // Remove loading message
-                            const loadingMessage = modalBody.querySelector('.loading-message');
-                            if (loadingMessage) {
-                                modalBody.removeChild(loadingMessage);
-                            }
-                        }
+                        // Hide processing modal
+                        processingModal.hide();
                         
                         if (data.status === 'success') {
+                            // Show success dialog
+                            showPurchaseSuccessDialog(data, chapterId);
+                            
                             // Update user points in the UI
                             if (currentUser.value) {
                                 currentUser.value.points = data.points_remaining;
                             }
                             
                             // Also update the chapters list to reflect the purchase
-                            // by unlocking the purchased chapter in the UI
                             if (selectedComic.value) {
                                 for (const chapter of chapters.value) {
                                     if (chapter.chapter_id === chapterId) {
@@ -880,78 +933,159 @@
                                     }
                                 }
                             }
-                            
-                            // Show success message before redirecting
-                            const successMessage = document.createElement('div');
-                            successMessage.className = 'alert alert-success';
-                            successMessage.innerHTML = `
-                                <strong>Success!</strong> Chapter purchased. Redirecting...
-                            `;
-                            
-                            if (modalBody) {
-                                modalBody.prepend(successMessage);
-                            }
-                            
-                            // Use the redirect URL from the response if available, otherwise construct it
-                            let redirectUrl = data.redirect_url;
-                            if (!redirectUrl && data.chapter_number && data.comic_id) {
-                                redirectUrl = `chapter-reader.html?chapter_id=${chapterId}&chapter_number=${data.chapter_number}&title=${encodeURIComponent(data.title || '')}&comic_id=${data.comic_id}&purchased=true`;
-                            }
-                            
-                            // Redirect after a short delay to show the success message
-                            setTimeout(() => {
-                                window.location.href = redirectUrl;
-                            }, 1000);
                         } else if (data.status === 'insufficient_funds') {
-                            // Unlikely to happen since we check before purchase, but handle it anyway
-                            const goToSubscription = confirm(
-                                `You don't have enough points. Would you like to subscribe to get more points?`
-                            );
-                            
-                            if (goToSubscription) {
-                                window.location.href = 'subscription.html';
-                            } else {
-                                // Re-enable chapter items if staying on the page
-                                if (modalBody) {
-                                    const chapterElements = modalBody.querySelectorAll('.chapter-item');
-                                    chapterElements.forEach(item => {
-                                        item.style.pointerEvents = '';
-                                        item.style.opacity = '';
-                                    });
-                                }
-                            }
+                            showInsufficientFundsDialog();
                         } else {
                             console.error('Unexpected response from purchase service:', data);
-                            alert('Error purchasing chapter access. Please try again.');
-                            
-                            // Re-enable chapter items
-                            if (modalBody) {
-                                const chapterElements = modalBody.querySelectorAll('.chapter-item');
-                                chapterElements.forEach(item => {
-                                    item.style.pointerEvents = '';
-                                    item.style.opacity = '';
-                                });
-                            }
+                            showErrorDialog('Error processing your purchase. Please try again.');
                         }
                     })
                     .catch(error => {
                         console.error('Error purchasing chapter:', error);
-                        alert('Error purchasing chapter. Please try again.');
-                        
-                        // Re-enable chapter items
-                        if (modalBody) {
-                            // Remove loading message
-                            const loadingMessage = modalBody.querySelector('.loading-message');
-                            if (loadingMessage) {
-                                modalBody.removeChild(loadingMessage);
+                        processingModal.hide();
+                        showErrorDialog('Error purchasing chapter. Please try again.');
+                    })
+                    .finally(() => {
+                        // Clean up processing modal
+                        document.getElementById('processingModal').addEventListener('hidden.bs.modal', function () {
+                            if (document.getElementById('processingModal')) {
+                                document.body.removeChild(document.getElementById('processingModal'));
                             }
-                            
-                            const chapterElements = modalBody.querySelectorAll('.chapter-item');
-                            chapterElements.forEach(item => {
-                                item.style.pointerEvents = '';
-                                item.style.opacity = '';
-                            });
+                        });
+                    });
+                }
+
+                // Show purchase success dialog
+                function showPurchaseSuccessDialog(data, chapterId) {
+                    const successDialog = document.createElement('div');
+                    successDialog.className = 'modal fade';
+                    successDialog.id = 'successModal';
+                    successDialog.setAttribute('tabindex', '-1');
+                    
+                    successDialog.innerHTML = `
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content" style="background-color: #d1e7dd; border-radius: 8px;">
+                                <div class="modal-header border-0">
+                                    <h5 class="modal-title" style="color: #198754;">Purchase Successful</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body text-center">
+                                    <div class="mb-3" style="font-size: 3rem; color: #198754;">
+                                        <i class="bi bi-check-circle-fill"></i>
+                                    </div>
+                                    <p>You have successfully unlocked this chapter.</p>
+                                    <p class="text-muted">Your new balance: <strong>${data.points_remaining} points</strong></p>
+                                </div>
+                                <div class="modal-footer border-0">
+                                    <button type="button" class="btn btn-success w-100" id="readNowBtn">
+                                        <i class="bi bi-book me-2"></i> Read Now
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    document.body.appendChild(successDialog);
+                    const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+                    successModal.show();
+                    
+                    // Read now button click handler
+                    document.getElementById('readNowBtn').addEventListener('click', () => {
+                        successModal.hide();
+                        
+                        // Use the redirect URL from the response if available, otherwise construct it
+                        let redirectUrl = data.redirect_url;
+                        if (!redirectUrl && data.chapter_number && data.comic_id) {
+                            redirectUrl = `chapter-reader.html?chapter_id=${chapterId}&chapter_number=${data.chapter_number}&title=${encodeURIComponent(data.title || '')}&comic_id=${data.comic_id}&purchased=true`;
                         }
+                        
+                        window.location.href = redirectUrl;
+                    });
+                    
+                    // Clean up when the modal is hidden
+                    document.getElementById('successModal').addEventListener('hidden.bs.modal', function () {
+                        document.body.removeChild(document.getElementById('successModal'));
+                    });
+                }
+
+                // Show insufficient funds dialog
+                function showInsufficientFundsDialog() {
+                    const errorDialog = document.createElement('div');
+                    errorDialog.className = 'modal fade';
+                    errorDialog.id = 'insufficientFundsModal';
+                    errorDialog.setAttribute('tabindex', '-1');
+                    
+                    errorDialog.innerHTML = `
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content" style="background-color: #f8d7da; border-radius: 8px;">
+                                <div class="modal-header border-0">
+                                    <h5 class="modal-title" style="color: #842029;">Insufficient Points</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body text-center">
+                                    <div class="mb-3" style="font-size: 3rem; color: #842029;">
+                                        <i class="bi bi-exclamation-triangle-fill"></i>
+                                    </div>
+                                    <p>You don't have enough points to unlock this chapter.</p>
+                                </div>
+                                <div class="modal-footer border-0 d-flex flex-column">
+                                    <a href="subscription.html" class="btn btn-primary w-100 mb-2">
+                                        <i class="bi bi-plus-circle me-2"></i> Get More Points
+                                    </a>
+                                    <button type="button" class="btn btn-outline-secondary w-100" data-bs-dismiss="modal">
+                                        <i class="bi bi-x me-2"></i> Close
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    document.body.appendChild(errorDialog);
+                    const errorModal = new bootstrap.Modal(document.getElementById('insufficientFundsModal'));
+                    errorModal.show();
+                    
+                    // Clean up when the modal is hidden
+                    document.getElementById('insufficientFundsModal').addEventListener('hidden.bs.modal', function () {
+                        document.body.removeChild(document.getElementById('insufficientFundsModal'));
+                    });
+                }
+
+                // Show generic error dialog
+                function showErrorDialog(message) {
+                    const errorDialog = document.createElement('div');
+                    errorDialog.className = 'modal fade';
+                    errorDialog.id = 'errorModal';
+                    errorDialog.setAttribute('tabindex', '-1');
+                    
+                    errorDialog.innerHTML = `
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content" style="background-color: #f8d7da; border-radius: 8px;">
+                                <div class="modal-header border-0">
+                                    <h5 class="modal-title" style="color: #842029;">Error</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body text-center">
+                                    <div class="mb-3" style="font-size: 3rem; color: #842029;">
+                                        <i class="bi bi-x-circle-fill"></i>
+                                    </div>
+                                    <p>${message}</p>
+                                </div>
+                                <div class="modal-footer border-0">
+                                    <button type="button" class="btn btn-danger w-100" data-bs-dismiss="modal">
+                                        <i class="bi bi-arrow-clockwise me-2"></i> Try Again
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    document.body.appendChild(errorDialog);
+                    const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+                    errorModal.show();
+                    
+                    // Clean up when the modal is hidden
+                    document.getElementById('errorModal').addEventListener('hidden.bs.modal', function () {
+                        document.body.removeChild(document.getElementById('errorModal'));
                     });
                 }
 
