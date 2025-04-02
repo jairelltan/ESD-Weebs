@@ -19,6 +19,14 @@ page_db_config = {
     'database': 'page_db'
 }
 
+# Database configuration for comic database
+comic_db_config = {
+    'host': 'localhost',
+    'user': 'root',
+    'password': '',
+    'database': 'comic_db'
+}
+
 def get_chapter_db_connection():
     try:
         conn = mysql.connector.connect(**chapter_db_config)
@@ -35,6 +43,15 @@ def get_page_db_connection():
         return conn
     except Error as e:
         print(f"Error connecting to page database: {e}")
+        return None
+
+def get_comic_db_connection():
+    try:
+        conn = mysql.connector.connect(**comic_db_config)
+        print("Comic database connection successful")
+        return conn
+    except Error as e:
+        print(f"Error connecting to comic database: {e}")
         return None
 
 def get_chapter_id(cursor, comic_id, chapter_number):
@@ -55,6 +72,13 @@ def get_comic_id(cursor, comic_name):
     result = cursor.fetchone()
     return result[0] if result else None
 
+def get_all_comics(cursor):
+    cursor.execute("""
+        SELECT comic_id, comic_name 
+        FROM comic
+    """)
+    return cursor.fetchall()
+
 def extract_chapter_number(chapter_folder):
     # Try different patterns to extract chapter number
     
@@ -74,6 +98,35 @@ def extract_chapter_number(chapter_folder):
         return int(match.group(1))
     
     return None
+
+def upload_comic_cover(comic_conn, comic_id, comic_name, image_path):
+    try:
+        cursor = comic_conn.cursor()
+        
+        # Check if the image file exists
+        if not os.path.exists(image_path):
+            print(f"Cover image file not found: {image_path}")
+            return False
+        
+        # Read the image file
+        with open(image_path, 'rb') as file:
+            image_data = file.read()
+            
+        # Update the comic with the cover image
+        cursor.execute("""
+            UPDATE comic 
+            SET comic_art = %s 
+            WHERE comic_id = %s
+        """, (image_data, comic_id))
+        
+        comic_conn.commit()
+        print(f"Successfully uploaded cover image for {comic_name}")
+        return True
+        
+    except Error as e:
+        print(f"Error uploading cover image: {e}")
+        comic_conn.rollback()
+        return False
 
 def upload_pages(chapter_conn, page_conn, comic_name, chapter_folder, files):
     try:
@@ -101,7 +154,7 @@ def upload_pages(chapter_conn, page_conn, comic_name, chapter_folder, files):
         print(f"Processing {comic_name} Chapter {chapter_number} ({len(files)} pages)")
         
         # Sort files numerically (to handle 01.jpg, 02.jpg, etc. correctly)
-        files.sort(key=lambda x: int(re.search(r'(\d+)', x).group(1)))
+        files.sort(key=lambda x: int(re.search(r'(\d+)', x).group(1)) if re.search(r'(\d+)', x) else 0)
         
         # Insert each page
         for page_number, filename in enumerate(files, 1):
@@ -141,21 +194,76 @@ def upload_pages(chapter_conn, page_conn, comic_name, chapter_folder, files):
         print(f"Error uploading pages: {e}")
         page_conn.rollback()
 
+def process_cover_images(comic_conn):
+    """Process all cover images from the images folder and update comics"""
+    
+    try:
+        cursor = comic_conn.cursor()
+        comics = get_all_comics(cursor)
+        
+        images_dir = 'images'
+        if not os.path.exists(images_dir):
+            print(f"Error: {images_dir} directory not found")
+            return
+            
+        image_files = os.listdir(images_dir)
+        
+        # Track which comics had covers updated
+        updated_comics = []
+        
+        for comic_id, comic_name in comics:
+            # Try different possible filename patterns for cover images
+            possible_filenames = [
+                f"{comic_name.lower().replace(' ', '_')}.jpg",
+                f"{comic_name.lower().replace(' ', '_')}.webp",
+                f"{comic_name.lower().replace(' ', '_')}.png",
+                f"{comic_name.lower()}.jpg",
+                f"{comic_name.lower()}.webp",
+                f"{comic_name.lower()}.png"
+            ]
+            
+            # Check if any of the possible filenames exist
+            for filename in possible_filenames:
+                if filename in image_files:
+                    image_path = os.path.join(images_dir, filename)
+                    success = upload_comic_cover(comic_conn, comic_id, comic_name, image_path)
+                    if success:
+                        updated_comics.append(comic_name)
+                        break
+            
+        # Print summary
+        if updated_comics:
+            print(f"\nUpdated cover images for {len(updated_comics)} comics:")
+            for comic in updated_comics:
+                print(f"- {comic}")
+        else:
+            print("\nNo cover images were updated")
+                
+    except Error as e:
+        print(f"Error processing cover images: {e}")
+
 def main():
     chapter_conn = get_chapter_db_connection()
     page_conn = get_page_db_connection()
-    
-    if not chapter_conn or not page_conn:
-        print("Failed to connect to databases.")
-        if chapter_conn:
-            chapter_conn.close()
-        if page_conn:
-            page_conn.close()
-        return
-    
-    chapters_dir = 'Chapters'
+    comic_conn = get_comic_db_connection()
     
     try:
+        if not chapter_conn or not page_conn or not comic_conn:
+            print("Failed to connect to one or more databases.")
+            return
+        
+        # First, process cover images
+        print("\n=== PROCESSING COMIC COVER IMAGES ===")
+        process_cover_images(comic_conn)
+        
+        # Then process chapter pages
+        print("\n=== PROCESSING CHAPTER PAGES ===")
+        chapters_dir = 'Chapters'
+        
+        if not os.path.exists(chapters_dir):
+            print(f"Error: {chapters_dir} directory not found")
+            return
+            
         # Iterate through each comic folder
         for comic_name in os.listdir(chapters_dir):
             comic_path = os.path.join(chapters_dir, comic_name)
@@ -176,13 +284,15 @@ def main():
                     upload_pages(chapter_conn, page_conn, comic_name, chapter_folder, files)
     
     except Exception as e:
-        print(f"Error processing folders: {e}")
-    
+        print(f"Error in main function: {e}")
+        
     finally:
         if chapter_conn:
             chapter_conn.close()
         if page_conn:
             page_conn.close()
+        if comic_conn:
+            comic_conn.close()
 
 if __name__ == "__main__":
     main() 
