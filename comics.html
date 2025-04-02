@@ -830,7 +830,7 @@
                                         : `<button disabled class="btn btn-danger w-100 mb-2 d-flex align-items-center justify-content-center" style="opacity: 0.8;">
                                             <i class="bi bi-exclamation-triangle me-2"></i> Insufficient points
                                            </button>
-                                           <a href="subscription.html" class="btn btn-primary w-100 mb-2 d-flex align-items-center justify-content-center">
+                                           <a href="subscribe.html" class="btn btn-primary w-100 mb-2 d-flex align-items-center justify-content-center">
                                             <i class="bi bi-plus-circle me-2"></i> Get More Points
                                            </a>`
                                     }
@@ -957,55 +957,19 @@
 
                 // Show purchase success dialog
                 function showPurchaseSuccessDialog(data, chapterId) {
-                    const successDialog = document.createElement('div');
-                    successDialog.className = 'modal fade';
-                    successDialog.id = 'successModal';
-                    successDialog.setAttribute('tabindex', '-1');
+                    // Use the redirect URL from the response if available, otherwise construct it
+                    let redirectUrl = data.redirect_url;
+                    if (!redirectUrl && data.chapter_number && data.comic_id) {
+                        redirectUrl = `chapter-reader.html?chapter_id=${chapterId}&chapter_number=${data.chapter_number}&title=${encodeURIComponent(data.title || '')}&comic_id=${data.comic_id}&purchased=true`;
+                    }
                     
-                    successDialog.innerHTML = `
-                        <div class="modal-dialog modal-dialog-centered">
-                            <div class="modal-content" style="background-color: #d1e7dd; border-radius: 8px;">
-                                <div class="modal-header border-0">
-                                    <h5 class="modal-title" style="color: #198754;">Purchase Successful</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body text-center">
-                                    <div class="mb-3" style="font-size: 3rem; color: #198754;">
-                                        <i class="bi bi-check-circle-fill"></i>
-                                    </div>
-                                    <p>You have successfully unlocked this chapter.</p>
-                                    <p class="text-muted">Your new balance: <strong>${data.points_remaining} points</strong></p>
-                                </div>
-                                <div class="modal-footer border-0">
-                                    <button type="button" class="btn btn-success w-100" id="readNowBtn">
-                                        <i class="bi bi-book me-2"></i> Read Now
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    `;
+                    // Update user points in the UI before redirecting
+                    if (currentUser.value) {
+                        currentUser.value.points = data.points_remaining;
+                    }
                     
-                    document.body.appendChild(successDialog);
-                    const successModal = new bootstrap.Modal(document.getElementById('successModal'));
-                    successModal.show();
-                    
-                    // Read now button click handler
-                    document.getElementById('readNowBtn').addEventListener('click', () => {
-                        successModal.hide();
-                        
-                        // Use the redirect URL from the response if available, otherwise construct it
-                        let redirectUrl = data.redirect_url;
-                        if (!redirectUrl && data.chapter_number && data.comic_id) {
-                            redirectUrl = `chapter-reader.html?chapter_id=${chapterId}&chapter_number=${data.chapter_number}&title=${encodeURIComponent(data.title || '')}&comic_id=${data.comic_id}&purchased=true`;
-                        }
-                        
-                        window.location.href = redirectUrl;
-                    });
-                    
-                    // Clean up when the modal is hidden
-                    document.getElementById('successModal').addEventListener('hidden.bs.modal', function () {
-                        document.body.removeChild(document.getElementById('successModal'));
-                    });
+                    // Redirect immediately
+                    window.location.href = redirectUrl;
                 }
 
                 // Show insufficient funds dialog
