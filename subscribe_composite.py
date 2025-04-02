@@ -23,19 +23,19 @@ payment_composite_URL = os.environ.get('payment_composite_URL') or "http://local
 
 stripe.api_key = 'pk_test_51R6nIRFRwiBVrzVlYE7jVVxhXRxI8S9Vv9OagRWQqhitOwgBF1hoiOKkJr3PDZUvqaxI16rQrdMPx018CMKK9hR00dakf2erY'  
 
-
 @app.route('/subscribe', methods=['POST'])
 def handle_subscription():
     try:
         data = request.get_json()
-        action = data.get('action', 'initiate')  # Default to initiate if not specified
         user_id = data.get('user_id')
+        plan_id = data.get('plan_id')
+        payment_intent_id = data.get('payment_intent_id')  # This will be None for initial request
 
-        print(f"Received {action} subscription request for user {user_id}")
+        print(f"Received subscription request for user {user_id} and plan {plan_id}")
+        print(f"Payment intent ID: {payment_intent_id}")
 
-        if action == 'initiate':
-            plan_id = data.get('plan_id')
-            
+        # If no payment_intent_id, this is the initial request to create payment intent
+        if not payment_intent_id:
             # Step 1: Get user details
             print(f"Fetching user details from {USER_URL}/user/{user_id}")
             user_response = requests.get(f"{USER_URL}/user/{user_id}")
@@ -99,9 +99,9 @@ def handle_subscription():
                 }
             })
 
-        elif action == 'complete':
+        # If payment_intent_id is present, this is the completion request
+        else:
             duration = data.get('duration')
-            transaction_id = data.get('transaction_id')
             amount = data.get('amount', 0)
             plan_name = data.get('plan_name', 'Unknown Plan')
 
@@ -141,7 +141,7 @@ def handle_subscription():
 
             receipt_data = {
                 "user_id": user_id,
-                "transaction_id": transaction_id,
+                "transaction_id": payment_intent_id,
                 "card_id": 1,
                 "current_points": 99999999,
                 "payment_method": "CREDIT_CARD",
@@ -178,15 +178,9 @@ def handle_subscription():
                     "user_id": user_id,
                     "points": 99999999,
                     "subscriber_status": duration.upper(),
-                    "transaction_id": transaction_id
+                    "transaction_id": payment_intent_id
                 }
             })
-
-        else:
-            return jsonify({
-                "code": 400,
-                "message": f"Invalid action: {action}"
-            }), 400
 
     except Exception as e:
         import traceback
@@ -194,7 +188,7 @@ def handle_subscription():
         print(error_msg)
         return jsonify({
             "code": 500,
-            "message": f"Failed to process subscription: {str(e)}"
+            "message": f"Failed to complete subscription: {str(e)}"
         }), 500
 
 # Error handler for invalid routes
