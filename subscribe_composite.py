@@ -3,6 +3,8 @@ import requests
 from flask_cors import CORS
 import os
 import json
+import stripe
+
 
 app = Flask(__name__)
 CORS(app)
@@ -18,6 +20,9 @@ RECEIPT_URL = "http://localhost:5006"
 user_URL = os.environ.get('user_URL') or "http://localhost:5000/user"
 premium_URL = os.environ.get('premium_URL') or "http://localhost:5004/premium"
 payment_composite_URL = os.environ.get('payment_composite_URL') or "http://localhost:5019/process_payment"
+
+stripe.api_key = 'pk_test_51R6nIRFRwiBVrzVlYE7jVVxhXRxI8S9Vv9OagRWQqhitOwgBF1hoiOKkJr3PDZUvqaxI16rQrdMPx018CMKK9hR00dakf2erY'  
+
 
 @app.route('/subscribe', methods=['POST'])
 def handle_subscription():
@@ -165,6 +170,18 @@ def complete_subscription():
             print(error_msg)
             # Don't return error as receipt is not critical, but log it
             print("Continuing despite receipt creation failure")
+
+        # Step 4: Create Notification
+
+        notification_data = {
+            "user_id": user_id,
+            "description":duration + " subscribed!"
+        }
+        
+        print(f"Creating receipt with data: {notification_data}")
+        notification_response = requests.post(f"{NOTIFICATION_URL}/notification", json=notification_data)
+        print(f"Receipt creation response status: {notification_response.status_code}")
+        print(f"Receipt creation response body: {notification_response.text}")
             
         return jsonify({
             "code": 200,
@@ -205,95 +222,19 @@ def subscribe_user(user_id):
                 }), 400
 
         payment_intent_id = data['payment_intent_id']
-        amount = data['amount']  # amount in cents
-        plan = data['plan']
 
-        # 1. Process payment through payment composite service
         try:
-            payment_response = requests.post(
-                payment_composite_URL,
-                json={
-                    "payment_intent_id": payment_intent_id,
-                    "amount": amount,
-                    "user_id": user_id,
-                    "plan": plan
-                }
-            )
-            
-            if payment_response.status_code not in range(200, 300):
+            payment_intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+            if payment_intent.status != 'succeeded':
                 return jsonify({
-                    "code": 500,
-                    "message": "Payment processing failed."
-                }), 500
-                
-            payment_result = payment_response.json()
-            print(f"Payment processed successfully: {payment_result}")
-            
-        except Exception as e:
+                    "code": 400,
+                    "message": "Payment has not been successfully processed by Stripe."
+                }), 400
+        except stripe.error.StripeError as e:
             return jsonify({
                 "code": 500,
-                "message": f"Payment composite service error: {str(e)}"
+                "message": f"Stripe error: {str(e)}"
             }), 500
-
-        # 2. Update user's premium status
-        try:
-            premium_response = requests.post(
-                f"{premium_URL}/create",
-                json={
-                    "user_id": user_id,
-                    "plan": plan
-                }
-            )
-            
-            if premium_response.status_code not in range(200, 300):
-                return jsonify({
-                    "code": 500,
-                    "message": "Failed to update premium status."
-                }), 500
-                
-            premium_result = premium_response.json()
-            print(f"Premium status updated successfully: {premium_result}")
-            
-        except Exception as e:
-            return jsonify({
-                "code": 500,
-                "message": f"Premium service error: {str(e)}"
-            }), 500
-
-        # 3. Update user points based on the plan
-        points_to_add = 99999999 if plan.upper() in ["MONTHLY", "YEARLY"] else 0
-        
-        try:
-            user_response = requests.put(
-                f"{user_URL}/{user_id}/points",
-                json={"points": points_to_add}
-            )
-            
-            if user_response.status_code not in range(200, 300):
-                return jsonify({
-                    "code": 500,
-                    "message": "Failed to update user points."
-                }), 500
-                
-            user_result = user_response.json()
-            print(f"User points updated successfully: {user_result}")
-            
-        except Exception as e:
-            return jsonify({
-                "code": 500,
-                "message": f"User service error: {str(e)}"
-            }), 500
-
-        # Return success response
-        return jsonify({
-            "code": 200,
-            "data": {
-                "payment_intent_id": payment_intent_id,
-                "receipt_id": payment_result["data"]["receipt_id"],
-                "message": "Subscription activated successfully",
-                "points": points_to_add
-            }
-        }), 200
 
     except Exception as e:
         return jsonify({
