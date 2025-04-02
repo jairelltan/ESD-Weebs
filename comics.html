@@ -746,7 +746,7 @@
                     // If chapter is locked, handle the locked chapter flow
                     if (chapter.is_locked) {
                         // Get current user data for the locked chapter prompt
-                        const userId = currentUser.value ? currentUser.value.id : 1;
+                    const userId = currentUser.value ? currentUser.value.id : 1;
                         const userPoints = currentUser.value ? currentUser.value.points : 0;
                         const unlockCost = 100; // Standard unlock cost
                         const canAfford = userPoints >= unlockCost;
@@ -880,8 +880,8 @@
                             <div class="modal-content">
                                 <div class="modal-body text-center py-4">
                                     <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
-                                        <span class="visually-hidden">Loading...</span>
-                                    </div>
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
                                     <h5>Processing Purchase</h5>
                                     <p class="text-muted">Please wait while we process your purchase...</p>
                                 </div>

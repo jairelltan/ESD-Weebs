@@ -165,9 +165,8 @@
                     try {
                         const userId = localStorage.getItem('userId') || 1;
                         
-                        // Call subscribe composite service with 'initiate' action
+                        // Call subscribe composite service
                         const response = await axios.post('http://127.0.0.1:5018/subscribe', {
-                            action: 'initiate',
                             user_id: userId,
                             plan_id: this.selectedPlan.plan_id
                         });
@@ -233,15 +232,14 @@
                             const userId = localStorage.getItem('userId') || 1;
                             
                             try {
-                                // Complete the subscription with 'complete' action
+                                // Complete the subscription using the same endpoint
                                 const completeResponse = await axios.post('http://localhost:5018/subscribe', {
-                                    action: 'complete',
                                     user_id: userId,
+                                    plan_id: this.selectedPlan.plan_id,
+                                    payment_intent_id: paymentIntent.id,
                                     duration: this.selectedPlan.duration,
-                                    transaction_id: paymentIntent.id,
                                     amount: paymentIntent.amount,
-                                    plan_name: this.selectedPlan.plan_name,
-                                    plan_id: this.selectedPlan.plan_id
+                                    plan_name: this.selectedPlan.plan_name
                                 });
 
                                 if (completeResponse.data.code === 200) {
