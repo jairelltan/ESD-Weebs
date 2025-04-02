@@ -9,6 +9,12 @@
     <style>
         body {
             background-color: #f5f5f5;
+            padding-bottom: 0 !important; /* Override any body padding */
+            margin-bottom: 0 !important;
+            overscroll-behavior-y: none; /* Prevent scroll bounce */
+            height: 100%;
+            margin: 0;
+            padding: 0;
         }
         .reader-navbar {
             background-color: #343a40;
@@ -29,7 +35,7 @@
         .page-viewer {
             max-width: 1000px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 20px 20px 60px 20px; /* Add bottom padding */
         }
         .scrolling-mode .comic-page {
             max-width: 100%;
@@ -74,18 +80,23 @@
         }
         .page-navigation-overlay {
             position: absolute;
-            top: 0;
-            height: 100%;
+            top: 60px; /* Start below the navbar */
+            height: calc(100% - 60px); /* Adjust height to exclude navbar */
             width: 50%;
             cursor: pointer;
             z-index: 10;
-            background-color: rgba(0,0,0,0.1);
+            background-color: transparent;
             opacity: 0;
             transition: opacity 0.2s ease;
             pointer-events: auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            -webkit-tap-highlight-color: transparent; /* Prevent blue highlight on mobile */
+            outline: none; /* Remove focus outline */
+            user-select: none; /* Prevent text selection */
+        }
+        .page-navigation-overlay:focus,
+        .page-navigation-overlay:active {
+            background-color: rgba(0,0,0,0.05);
+            outline: none;
         }
         .page-navigation-overlay.left {
             left: 0;
@@ -93,25 +104,9 @@
         .page-navigation-overlay.right {
             right: 0;
         }
-        .nav-arrow {
-            width: 60px;
-            height: 60px;
-            background-color: rgba(255, 255, 255, 0.8);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            color: #333;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            transition: all 0.2s ease;
-        }
-        .nav-arrow:hover {
-            background-color: rgba(255, 255, 255, 0.95);
-            transform: scale(1.1);
-        }
         .page-navigation-overlay:hover {
-            opacity: 1;
+            opacity: 0.5;
+            background-color: rgba(0,0,0,0.05);
         }
         .page-indicator {
             position: absolute;
@@ -128,7 +123,7 @@
         }
         .page-tracker {
             position: fixed;
-            bottom: 20px;
+            bottom: 70px; /* Position above the nav bar */
             left: 50%;
             transform: translateX(-50%);
             z-index: 4;
@@ -145,15 +140,68 @@
             padding: 6px 12px;
         }
         .chapter-navigation {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1rem;
+            position: sticky;
+            bottom: 0;
+            z-index: 100;
+            padding: 0.5rem 1rem;
+        }
+        .chapter-navigation button {
+            flex: 1;
+            margin: 0 5px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .chapter-navigation button .chapter-number {
+            display: block;
+            font-size: 0.75rem;
+            margin-top: 2px;
+            opacity: 0.9;
+        }
+        .chapter-navigation button i {
+            margin-top: -1px;
+        }
+        /* Bottom navigation specific styles */
+        .chapter-navigation.mt-4.mb-5 {
             position: fixed;
-            bottom: 20px;
+            bottom: 0;
             left: 0;
             right: 0;
             display: flex;
+            justify-content: space-between;
+            background-color: #0d6efd;
+            padding: 0;
+            z-index: 1000;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+            border-radius: 0;
+            margin: 0 !important; /* Override Bootstrap margins */
+        }
+        .chapter-navigation.mt-4.mb-5 button {
+            flex: 1.5;
+            background-color: transparent;
+            color: white;
+            border: none;
+            padding: 15px;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
             justify-content: center;
-            gap: 100px;
-            z-index: 4;
-            pointer-events: auto;
+            transition: background-color 0.2s;
+            border-radius: 0;
+        }
+        .chapter-navigation.mt-4.mb-5 button:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .chapter-navigation.mt-4.mb-5 button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .chapter-navigation.mt-4.mb-5 button i {
+            margin: 0 5px;
         }
         .loading-container {
             display: flex;
@@ -216,12 +264,13 @@
         /* Thread styles */
         #threadContainer {
             padding-top: 20px;
-            padding-bottom: 80px;
+            padding-bottom: 0;
             transition: all 0.3s ease;
             position: relative;
             z-index: 2;
             background-color: #f5f5f5;
             pointer-events: auto;
+            margin-bottom: 60px; /* Match the height of the nav bar */
         }
         #threadContainer .card {
             border: none;
@@ -254,6 +303,55 @@
             color: #0d6efd;
             border-color: #fff;
         }
+        /* Update thread container to ensure it doesn't overflow */
+        .container.mt-5#threadContainer {
+            margin-bottom: 60px !important; /* Ensure this overrides other styles */
+            padding-bottom: 20px;
+        }
+        /* Add styling for the page tracker in the bottom navigation */
+        .bottom-page-tracker {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.85rem;
+            border-left: 1px solid rgba(255, 255, 255, 0.2);
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+            background-color: #6c757d; /* Grey background as requested */
+            min-width: 100px;
+            text-align: center;
+            font-weight: 500;
+        }
+        /* Keep the buttons flexible but ensure page tracker has space */
+        .chapter-navigation.mt-4.mb-5 button {
+            flex: 2;
+        }
+        .chapter-navigation.mt-4.mb-5 .bottom-page-tracker {
+            flex: 1;
+        }
+        /* Ensure the top page tracker doesn't interfere */
+        #pageTracker {
+            display: none !important;
+        }
+        /* Show page tracker only in page mode by default */
+        .scrolling-mode .bottom-page-tracker {
+            display: none;
+        }
+        .page-by-page-mode .bottom-page-tracker {
+            display: flex;
+        }
+    </style>
+    <!-- Override page tracker display styles -->
+    <style>
+        /* Always show bottom page tracker regardless of reading mode */
+        .bottom-page-tracker {
+            display: flex !important;
+        }
+        
+        /* Hide the top page tracker since we're using the bottom one */
+        #pageTracker {
+            display: none !important;
+        }
     </style>
 </head>
 <body>
@@ -272,24 +370,24 @@
                     <div class="d-flex align-items-center gap-3">
                         <div class="zoom-controls" id="zoomControls">
                             <div class="d-flex align-items-center gap-2">
-                                <div class="zoom-btn" id="zoomOutBtn"><i class="bi bi-dash"></i></div>
+                                <div class="zoom-btn" id="zoomOutBtn" onclick="zoomOut()"><i class="bi bi-dash"></i></div>
                                 <div class="zoom-slider-container">
-                                    <input type="range" class="zoom-slider" id="zoomSlider" min="50" max="300" value="100">
+                                    <input type="range" class="zoom-slider" id="zoomSlider" min="50" max="300" value="100" oninput="updateZoomFromSlider(event)">
                                     <span class="zoom-level" id="zoomLevel">100%</span>
                                 </div>
-                                <div class="zoom-btn" id="zoomInBtn"><i class="bi bi-plus"></i></div>
-                                <div class="zoom-btn" id="zoomResetBtn"><i class="bi bi-arrows-angle-contract"></i></div>
+                                <div class="zoom-btn" id="zoomInBtn" onclick="zoomIn()"><i class="bi bi-plus"></i></div>
+                                <div class="zoom-btn" id="zoomResetBtn" onclick="resetZoom()"><i class="bi bi-arrows-angle-contract"></i></div>
                             </div>
                         </div>
                         <div class="btn-group btn-group-sm" role="group" aria-label="Reading mode">
-                            <button type="button" class="btn btn-outline-light active" id="scrollModeBtn" data-mode="scroll">
+                            <button type="button" class="btn btn-outline-light active" id="scrollModeBtn" data-mode="scroll" onclick="applyReadingMode('scroll')">
                                 <i class="bi bi-arrow-down-up"></i> Scroll Mode
                             </button>
-                            <button type="button" class="btn btn-outline-light" id="pageModeBtn" data-mode="page">
+                            <button type="button" class="btn btn-outline-light" id="pageModeBtn" data-mode="page" onclick="applyReadingMode('page')">
                                 <i class="bi bi-arrow-left-right"></i> Page Mode
                             </button>
                         </div>
-                        <button type="button" class="btn btn-outline-light btn-sm ms-3" id="toggleThreadsBtn">
+                        <button type="button" class="btn btn-outline-light btn-sm ms-3" id="toggleThreadsBtn" onclick="toggleThreadsVisibility()">
                             <i class="bi bi-chat-left-text"></i> Discussions
                         </button>
                     </div>
@@ -306,15 +404,6 @@
 
     <div class="page-viewer scrolling-mode" id="pageViewer" style="display: none;">
         <!-- Pages will be loaded here -->
-    </div>
-
-    <div class="chapter-navigation">
-        <button type="button" class="btn btn-primary shadow" id="prevChapter" disabled>
-            <i class="bi bi-chevron-left"></i> Previous Chapter
-        </button>
-        <button type="button" class="btn btn-primary shadow" id="nextChapter" disabled>
-            Next Chapter <i class="bi bi-chevron-right"></i>
-        </button>
     </div>
 
     <div class="page-tracker text-center mt-2" style="display: none;" id="pageTracker">
@@ -367,6 +456,19 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Bottom chapter navigation buttons with page tracker -->
+    <div class="chapter-navigation mt-4 mb-5">
+        <button type="button" id="prevChapterBottom" disabled onclick="prevChapterHandler(event); return false;">
+            <i class="bi bi-chevron-left"></i> Previous Chapter
+        </button>
+        <div class="bottom-page-tracker">
+            <span id="bottomPageIndicator">Page <span id="bottomCurrentPage">1</span> / <span id="bottomTotalPages">0</span></span>
+        </div>
+        <button type="button" id="nextChapterBottom" disabled onclick="nextChapterHandler(event); return false;">
+            Next Chapter <i class="bi bi-chevron-right"></i>
+        </button>
     </div>
 
     <script>
@@ -595,33 +697,66 @@
                 
                 if (navResponse.ok) {
                     const navData = await navResponse.json();
-                    console.log('Navigation data:', navData);
+                    console.log('Navigation data loaded successfully:', navData);
                     
                     // Enable/disable navigation buttons
-                    const prevBtn = document.getElementById('prevChapter');
-                    const nextBtn = document.getElementById('nextChapter');
+                    // Removed references to prevBtn and nextBtn (the top buttons)
+                    const prevBtnBottom = document.getElementById('prevChapterBottom');
+                    const nextBtnBottom = document.getElementById('nextChapterBottom');
                     
                     if (navData.prev_chapter) {
-                        prevBtn.disabled = false;
-                        prevBtn.onclick = () => navigateToChapter(
-                            navData.prev_chapter.chapter_id, 
-                            navData.prev_chapter.chapter_number,
-                            ''  // We'll need to fetch the title separately
-                        );
+                        // Store previous chapter data for direct onclick handler
+                        window.prevChapterData = navData.prev_chapter;
+                        
+                        // Only update bottom button
+                        prevBtnBottom.disabled = false;
+                        
+                        // Update chapter numbers in the button text with formatted text
+                        prevBtnBottom.innerHTML = `Previous Chapter <i class="bi bi-chevron-left"></i> Chapter ${navData.prev_chapter.chapter_number}`;
+                        
+                        // Use direct function reference instead of arrow function
+                        prevBtnBottom.onclick = function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            prevChapterHandler(e);
+                            return false;
+                        };
+                        
+                        console.log('Previous chapter button enabled:', navData.prev_chapter);
                     } else {
-                        prevBtn.disabled = true;
+                        window.prevChapterData = null;
+                        prevBtnBottom.disabled = true;
+                        prevBtnBottom.innerHTML = `Previous Chapter <i class="bi bi-chevron-left"></i> No Previous Chapter`;
+                        console.log('No previous chapter available');
                     }
                     
                     if (navData.next_chapter) {
-                        nextBtn.disabled = false;
-                        nextBtn.onclick = () => navigateToChapter(
-                            navData.next_chapter.chapter_id, 
-                            navData.next_chapter.chapter_number,
-                            ''  // We'll need to fetch the title separately
-                        );
+                        // Store next chapter data for direct onclick handler
+                        window.nextChapterData = navData.next_chapter;
+                        
+                        // Only update bottom button
+                        nextBtnBottom.disabled = false;
+                        
+                        // Update chapter numbers in the button text with formatted text
+                        nextBtnBottom.innerHTML = `Next Chapter <i class="bi bi-chevron-right"></i> Chapter ${navData.next_chapter.chapter_number}`;
+                        
+                        // Use direct function reference instead of arrow function
+                        nextBtnBottom.onclick = function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            nextChapterHandler(e);
+                            return false;
+                        };
+                        
+                        console.log('Next chapter button enabled:', navData.next_chapter);
                     } else {
-                        nextBtn.disabled = true;
+                        window.nextChapterData = null;
+                        nextBtnBottom.disabled = true;
+                        nextBtnBottom.innerHTML = `Next Chapter <i class="bi bi-chevron-right"></i>`;
+                        console.log('No next chapter available');
                     }
+                } else {
+                    console.error('Failed to load navigation data. Status:', navResponse.status);
                 }
             } catch (error) {
                 console.error('Error loading chapter:', error);
@@ -744,22 +879,52 @@
         }
 
         // Navigate to another chapter
-        function navigateToChapter(chapterId, chapterNumber, title) {
-            // Before navigating, check if the target chapter is locked
-            validateChapterAccess(chapterId, function(isAccessible, lockedChapterId, lockedChapterNumber, lockedTitle) {
-                if (!isAccessible) {
-                    // Show purchase dialog instead of error message
-                    showPurchaseDialog(lockedChapterId || chapterId, lockedChapterNumber || chapterNumber, lockedTitle || title);
-                    return;
-                }
-                
-                // Get the purchased parameter from the current URL if it exists
+        function navigateToChapter(chapterId, chapterNumber, title, event) {
+            console.log('navigateToChapter called with:', { chapterId, chapterNumber, title });
+            
+            // Prevent event propagation if event is provided
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                event.stopImmediatePropagation();
+            }
+            
+            // Direct navigation for testing purposes if shift key is pressed
+            if (event && event.shiftKey) {
+                console.log('Shift key pressed, bypassing validation');
                 const urlParams = new URLSearchParams(window.location.search);
                 const purchased = urlParams.get('purchased') === 'true' ? '&purchased=true' : '';
-                
-                // Navigate to chapter if unlocked, preserving the purchased parameter
-                window.location.href = `chapter-reader.html?chapter_id=${chapterId}&chapter_number=${chapterNumber}&title=${encodeURIComponent(title)}&comic_id=${comicId}${purchased}`;
-            }, chapterNumber, title);
+                const url = `chapter-reader.html?chapter_id=${chapterId}&chapter_number=${chapterNumber}&title=${encodeURIComponent(title || '')}&comic_id=${comicId}${purchased}`;
+                console.log('Navigating directly to:', url);
+                window.location.href = url;
+                return;
+            }
+            
+            try {
+                // Before navigating, check if the target chapter is locked
+                validateChapterAccess(chapterId, function(isAccessible, lockedChapterId, lockedChapterNumber, lockedTitle) {
+                    console.log('Chapter access validation result:', { isAccessible, lockedChapterId, lockedChapterNumber, lockedTitle });
+                    
+                    if (!isAccessible) {
+                        // Show purchase dialog instead of error message
+                        console.log('Chapter is locked, showing purchase dialog');
+                        showPurchaseDialog(lockedChapterId || chapterId, lockedChapterNumber || chapterNumber, lockedTitle || title);
+                        return;
+                    }
+                    
+                    // Get the purchased parameter from the current URL if it exists
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const purchased = urlParams.get('purchased') === 'true' ? '&purchased=true' : '';
+                    
+                    // Navigate to chapter if unlocked, preserving the purchased parameter
+                    const url = `chapter-reader.html?chapter_id=${chapterId}&chapter_number=${chapterNumber}&title=${encodeURIComponent(title || '')}&comic_id=${comicId}${purchased}`;
+                    console.log('Navigating to unlocked chapter:', url);
+                    window.location.href = url;
+                }, chapterNumber, title);
+            } catch (error) {
+                console.error('Error in navigateToChapter:', error);
+                alert('Error navigating to chapter. Please try again.');
+            }
         }
         
         // Function to show purchase dialog for a locked chapter
@@ -853,21 +1018,28 @@
 
         // Function to validate chapter access using verify_history service
         function validateChapterAccess(chapterId, callback, chapterNumber = '', title = '') {
+            console.log('Validating chapter access for:', { chapterId, chapterNumber, title });
+            
             // Default user ID (could be fetched from localStorage in a real app)
             const userId = 1;
             
             // Call the more efficient single chapter verification endpoint
             fetch(`http://localhost:5015/verify/chapter/${chapterId}/user/${userId}`)
                 .then(response => {
+                    console.log('Verification response status:', response.status);
                     if (!response.ok) {
                         console.error('Failed to verify chapter access', response.status);
                         // If service fails, we allow access to prevent blocking the user
                         callback(true);
-                        return;
+                        return null;
                     }
                     return response.json();
                 })
                 .then(data => {
+                    if (data === null) return; // Early return if there was an error
+                    
+                    console.log('Verification data:', data);
+                    
                     if (!data) {
                         console.error('Invalid response from verify service', data);
                         callback(true);
@@ -876,8 +1048,10 @@
                     
                     // Check if the chapter is accessible
                     if (data.is_accessible) {
+                        console.log('Chapter is accessible');
                         callback(true);
                     } else {
+                        console.log('Chapter is not accessible, showing purchase dialog');
                         // Instead of just showing an alert, display the purchase dialog
                         callback(false, chapterId, chapterNumber, title);
                     }
@@ -998,30 +1172,23 @@
                 >
             `).join('');
             
-            // Add navigation overlays for page-by-page mode
-            const pageByPageNavigation = `
-                <div class="page-navigation-overlay left" id="prevPageOverlay" onclick="navigateToPrevPage()"></div>
-                <div class="page-navigation-overlay right" id="nextPageOverlay" onclick="navigateToNextPage()"></div>
-                <div class="page-indicator" id="pageIndicator">Page 1 of ${chapterData.pages.length}</div>
-            `;
-            
-            pageViewer.innerHTML = pageElements + pageByPageNavigation;
+            // Set page viewer content (without navigation overlays)
+            pageViewer.innerHTML = pageElements;
             pageViewer.style.display = 'block';
             
             // Set up image loading events
             initPageLoadingEvents();
             
-            // Apply current reading mode
+            // Apply current reading mode (will add navigation overlays if needed)
             applyReadingMode(currentReadingMode);
-            
-            // Set up page navigation events for overlay navigation
-            document.getElementById('prevPageOverlay').addEventListener('click', navigateToPrevPage);
-            document.getElementById('nextPageOverlay').addEventListener('click', navigateToNextPage);
             
             // Set up click-to-zoom on pages
             document.querySelectorAll('.comic-page').forEach(page => {
                 page.addEventListener('click', toggleZoom);
             });
+            
+            // Initialize the bottom page tracker
+            updateBottomPageTracker();
             
             // Preload nearby pages
             preloadNearbyPages(currentPageIndex);
@@ -1066,6 +1233,36 @@
             const pageViewer = document.getElementById('pageViewer');
             const pageIndicator = document.getElementById('pageIndicator');
             const zoomControls = document.getElementById('zoomControls');
+            const bottomTracker = document.querySelector('.bottom-page-tracker');
+            
+            // Store the current page before changing modes
+            const currentPage = document.querySelector('.comic-page.active');
+            let currentPagePosition = 0;
+            
+            // If switching from page mode to scroll mode, remember current page index
+            if (currentReadingMode === 'page' && mode === 'scroll') {
+                // Store current page index for later
+                currentPagePosition = currentPageIndex;
+            } 
+            // If switching from scroll mode to page mode, find the page closest to viewport
+            else if (currentReadingMode === 'scroll' && mode === 'page') {
+                const pages = document.querySelectorAll('.comic-page');
+                const scrollPosition = window.scrollY + window.innerHeight / 2;
+                
+                // Find the page closest to the middle of the viewport
+                let closestDistance = Infinity;
+                
+                pages.forEach((page, index) => {
+                    const rect = page.getBoundingClientRect();
+                    const pageMiddle = rect.top + rect.height / 2;
+                    const distance = Math.abs(pageMiddle);
+                    
+                    if (distance < closestDistance) {
+                        closestDistance = distance;
+                        currentPagePosition = index;
+                    }
+                });
+            }
             
             // Reset zoom level when changing modes
             resetZoom();
@@ -1074,10 +1271,23 @@
             document.getElementById('scrollModeBtn').classList.toggle('active', mode === 'scroll');
             document.getElementById('pageModeBtn').classList.toggle('active', mode === 'page');
             
+            // Remove existing navigation overlays to avoid duplicates
+            document.querySelectorAll('.page-navigation-overlay').forEach(overlay => {
+                overlay.remove();
+            });
+            
+            // Always show the bottom page tracker regardless of mode
+            if (bottomTracker) {
+                bottomTracker.style.display = 'flex';
+            }
+            
             // Apply mode-specific styles
             if (mode === 'page') {
                 pageViewer.classList.remove('scrolling-mode');
                 pageViewer.classList.add('page-by-page-mode');
+                
+                // Set current page index to the stored position
+                currentPageIndex = currentPagePosition;
                 
                 // Show only the current page
                 const pages = document.querySelectorAll('.comic-page');
@@ -1095,22 +1305,42 @@
                     }
                 });
                 
-                // Show page indicator and zoom controls
-                if (pageIndicator) {
-                    updatePageIndicator();
-                    pageIndicator.style.display = 'block';
+                // Create new navigation overlays
+                const leftOverlay = document.createElement('div');
+                leftOverlay.className = 'page-navigation-overlay left';
+                leftOverlay.id = 'prevPageOverlay';
+                leftOverlay.addEventListener('click', navigateToPrevPage);
+                
+                const rightOverlay = document.createElement('div');
+                rightOverlay.className = 'page-navigation-overlay right';
+                rightOverlay.id = 'nextPageOverlay';
+                rightOverlay.addEventListener('click', navigateToNextPage);
+                
+                // Add new overlays to page viewer
+                pageViewer.appendChild(leftOverlay);
+                pageViewer.appendChild(rightOverlay);
+                
+                // Show page indicator
+                if (!pageIndicator) {
+                    const indicator = document.createElement('div');
+                    indicator.className = 'page-indicator';
+                    indicator.id = 'pageIndicator';
+                    pageViewer.appendChild(indicator);
                 }
                 
-                // Show navigation overlays but keep pointer-events disabled by default
-                document.querySelectorAll('.page-navigation-overlay').forEach(overlay => {
-                    overlay.style.display = 'block';
-                    overlay.style.pointerEvents = 'none';
-                });
+                updatePageIndicator();
+                
+                if (pageIndicator) {
+                    pageIndicator.style.display = 'block';
+                }
                 
                 // Show zoom controls for page mode
                 if (zoomControls) {
                     zoomControls.style.display = 'flex';
                 }
+                
+                // Add scroll event listener for page tracking
+                window.removeEventListener('scroll', handleScroll);
             } else {
                 pageViewer.classList.add('scrolling-mode');
                 pageViewer.classList.remove('page-by-page-mode');
@@ -1126,32 +1356,54 @@
                     page.style.transform = '';
                 });
                 
-                // Hide page indicator and overlays
+                // Hide page indicator
                 if (pageIndicator) {
                     pageIndicator.style.display = 'none';
                 }
-                
-                // Hide navigation overlays
-                document.querySelectorAll('.page-navigation-overlay').forEach(overlay => {
-                    overlay.style.display = 'none';
-                    overlay.style.pointerEvents = 'none';
-                });
                 
                 // Hide zoom controls in scroll mode
                 if (zoomControls) {
                     zoomControls.style.display = 'none';
                 }
+                
+                // After rendering, scroll to the appropriate page
+                setTimeout(() => {
+                    const targetPage = document.querySelectorAll('.comic-page')[currentPagePosition];
+                    if (targetPage) {
+                        targetPage.scrollIntoView({ behavior: 'auto', block: 'start' });
+                    }
+                }, 50);
+                
+                // Add scroll event listener for page tracking
+                window.addEventListener('scroll', handleScroll);
             }
             
             // Save current mode
             currentReadingMode = mode;
+            
+            // Trigger an initial scroll event to update the page tracker
+            if (mode === 'scroll') {
+                setTimeout(handleScroll, 100);
+            }
         }
         
         // Function to navigate to previous page
-        function navigateToPrevPage() {
+        function navigateToPrevPage(event) {
+            // Prevent default and stop propagation if this was triggered by a click event
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                event.stopImmediatePropagation();
+            }
+            
+            // Only proceed if we're in page mode
+            if (currentReadingMode !== 'page') return;
+            
+            const pages = document.querySelectorAll('.comic-page');
+            
             if (currentPageIndex > 0) {
                 const currentPage = document.querySelector('.comic-page.active');
-                const prevPage = document.querySelectorAll('.comic-page')[currentPageIndex - 1];
+                const prevPage = pages[currentPageIndex - 1];
                 
                 if (currentPage && prevPage) {
                     // Deactivate current page
@@ -1166,15 +1418,34 @@
                     
                     currentPageIndex--;
                     updatePageIndicator();
+                    updateBottomPageTracker(); // Also update bottom tracker
+                    
+                    // If zoomed, apply zoom to new active page
+                    if (currentZoomLevel !== 1) {
+                        applyZoom();
+                    }
                 }
             }
         }
         
         // Function to navigate to next page
-        function navigateToNextPage() {
+        function navigateToNextPage(event) {
+            // Prevent default and stop propagation if this was triggered by a click event
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                event.stopImmediatePropagation();
+            }
+            
+            // Only proceed if we're in page mode
+            if (currentReadingMode !== 'page') return;
+            
+            const pages = document.querySelectorAll('.comic-page');
+            const totalPages = pages.length;
+            
             if (currentPageIndex < totalPages - 1) {
                 const currentPage = document.querySelector('.comic-page.active');
-                const nextPage = document.querySelectorAll('.comic-page')[currentPageIndex + 1];
+                const nextPage = pages[currentPageIndex + 1];
                 
                 if (currentPage && nextPage) {
                     // Deactivate current page
@@ -1189,6 +1460,12 @@
                     
                     currentPageIndex++;
                     updatePageIndicator();
+                    updateBottomPageTracker(); // Also update bottom tracker
+                    
+                    // If zoomed, apply zoom to new active page
+                    if (currentZoomLevel !== 1) {
+                        applyZoom();
+                    }
                 }
             }
         }
@@ -1196,9 +1473,35 @@
         // Update page indicator
         function updatePageIndicator() {
             const pages = document.querySelectorAll('.comic-page');
-            const indicator = document.getElementById('pageIndicator');
+            let indicator = document.getElementById('pageIndicator');
+            
+            // Create indicator if it doesn't exist
+            if (!indicator) {
+                indicator = document.createElement('div');
+                indicator.className = 'page-indicator';
+                indicator.id = 'pageIndicator';
+                document.getElementById('pageViewer').appendChild(indicator);
+            }
+            
+            // Update text content
             if (indicator) {
                 indicator.textContent = `Page ${currentPageIndex + 1} of ${pages.length}`;
+                indicator.style.display = currentReadingMode === 'page' ? 'block' : 'none';
+            }
+            
+            // Also update the bottom tracker
+            updateBottomPageTracker();
+        }
+        
+        // Function to update the bottom page tracker
+        function updateBottomPageTracker() {
+            const pages = document.querySelectorAll('.comic-page');
+            const bottomCurrentPage = document.getElementById('bottomCurrentPage');
+            const bottomTotalPages = document.getElementById('bottomTotalPages');
+            
+            if (bottomCurrentPage && bottomTotalPages) {
+                bottomCurrentPage.textContent = currentPageIndex + 1;
+                bottomTotalPages.textContent = pages.length;
             }
         }
         
@@ -1362,30 +1665,11 @@
         
         // Initialize the page
         document.addEventListener('DOMContentLoaded', function() {
-            // Set up reading mode toggle buttons
-            document.getElementById('scrollModeBtn').addEventListener('click', function() {
-                applyReadingMode('scroll');
-            });
-            
-            document.getElementById('pageModeBtn').addEventListener('click', function() {
-                applyReadingMode('page');
-            });
-            
-            // Set up threads toggle button
-            document.getElementById('toggleThreadsBtn').addEventListener('click', function() {
-                toggleThreadsVisibility();
-            });
-            
             // Set up keyboard navigation
             document.addEventListener('keydown', handleKeyNavigation);
             
-            // Set up zoom control buttons
-            document.getElementById('zoomInBtn').addEventListener('click', zoomIn);
-            document.getElementById('zoomOutBtn').addEventListener('click', zoomOut);
-            document.getElementById('zoomResetBtn').addEventListener('click', resetZoom);
-            
-            // Set up zoom control events
-            document.getElementById('zoomSlider').addEventListener('input', updateZoomFromSlider);
+            // Add scroll event listener for page tracking
+            window.addEventListener('scroll', handleScroll);
             
             // Load chapter
             loadChapter();
@@ -1768,6 +2052,99 @@
             } catch (error) {
                 console.error('Error liking thread:', error);
                 alert('Error liking thread. Please try again.');
+            }
+        }
+
+        // Make all navigation and control functions globally accessible
+        window.navigateToPrevPage = navigateToPrevPage;
+        window.navigateToNextPage = navigateToNextPage;
+        window.zoomIn = zoomIn;
+        window.zoomOut = zoomOut;
+        window.resetZoom = resetZoom;
+        window.updateZoomFromSlider = updateZoomFromSlider;
+        window.applyReadingMode = applyReadingMode;
+        window.toggleThreadsVisibility = toggleThreadsVisibility;
+        window.navigateToChapter = navigateToChapter;
+        window.prevChapterHandler = prevChapterHandler;
+        window.nextChapterHandler = nextChapterHandler;
+
+        // Chapter navigation button handlers (for direct onclick)
+        // These will be populated when navigation data is loaded
+        let prevChapterData = null;
+        let nextChapterData = null;
+
+        function prevChapterHandler(event) {
+            console.log('Previous Chapter button clicked');
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                event.stopImmediatePropagation();
+            }
+            
+            if (window.prevChapterData) {
+                console.log('Navigating to previous chapter:', window.prevChapterData);
+                navigateToChapter(
+                    window.prevChapterData.chapter_id,
+                    window.prevChapterData.chapter_number,
+                    window.prevChapterData.title || '',
+                    event
+                );
+            } else {
+                console.warn('No previous chapter data available');
+            }
+            return false;
+        }
+
+        function nextChapterHandler(event) {
+            console.log('Next Chapter button clicked');
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                event.stopImmediatePropagation();
+            }
+            
+            if (window.nextChapterData) {
+                console.log('Navigating to next chapter:', window.nextChapterData);
+                navigateToChapter(
+                    window.nextChapterData.chapter_id,
+                    window.nextChapterData.chapter_number,
+                    window.nextChapterData.title || '',
+                    event
+                );
+            } else {
+                console.warn('No next chapter data available');
+            }
+            return false;
+        }
+
+        // Now, add scroll tracking function to update the page indicator during scrolling
+        function handleScroll() {
+            // Only execute if we're in scroll mode
+            if (currentReadingMode !== 'scroll') return;
+            
+            const pages = document.querySelectorAll('.comic-page');
+            if (!pages.length) return;
+            
+            const viewportMiddle = window.scrollY + window.innerHeight / 2;
+            let closestPage = 0;
+            let closestDistance = Infinity;
+            
+            // Find the page closest to the middle of the viewport
+            pages.forEach((page, index) => {
+                const rect = page.getBoundingClientRect();
+                const pageMiddle = window.scrollY + rect.top + rect.height / 2;
+                const distance = Math.abs(viewportMiddle - pageMiddle);
+                
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestPage = index;
+                }
+            });
+            
+            // Update tracking variables and UI
+            if (closestPage !== currentPageIndex) {
+                currentPageIndex = closestPage;
+                updateBottomPageTracker();
             }
         }
     </script>
