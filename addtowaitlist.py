@@ -37,7 +37,7 @@ def publish_to_queue(channel, data):
     )
     print(f" [x] Sent data to RabbitMQ: {data}")
 
-@app.route('/addtowishlist/<int:user_id>/<int:product_id>', methods=['GET'])
+@app.route('/addtowaitlist/<int:user_id>/<int:product_id>', methods=['GET'])
 def get_composite_data(user_id, product_id):
     # Fetch user data
     user_response = requests.get(f"{USER_SERVICE_URL}/{user_id}")
