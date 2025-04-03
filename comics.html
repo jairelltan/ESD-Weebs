@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,22 +14,27 @@
             transition: transform 0.2s;
             height: 100%;
         }
+
         .comic-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
+
         .status-badge {
             position: absolute;
             top: 10px;
             right: 10px;
         }
+
         .genre-badge {
             margin-right: 5px;
             margin-bottom: 5px;
         }
+
         .comic-image-container {
             width: 100%;
-            aspect-ratio: 1/1; /* Creates a perfect square */
+            aspect-ratio: 1/1;
+            /* Creates a perfect square */
             overflow: hidden;
             display: flex;
             justify-content: center;
@@ -36,51 +42,62 @@
             margin-bottom: 1rem;
             background-color: #f8f9fa;
             border-radius: 4px;
-            max-width: 300px; /* Limit maximum size */
+            max-width: 300px;
+            /* Limit maximum size */
             margin-left: auto;
             margin-right: auto;
         }
+
         .comic-image {
             width: 100%;
             height: 100%;
             object-fit: cover;
             object-position: center top;
         }
+
         .image-placeholder {
             width: 100%;
-            aspect-ratio: 1/1; /* Creates a perfect square */
+            aspect-ratio: 1/1;
+            /* Creates a perfect square */
             background-color: #f8f9fa;
             display: flex;
             align-items: center;
             justify-content: center;
             color: #6c757d;
             border-radius: 4px;
-            max-width: 300px; /* Limit maximum size */
+            max-width: 300px;
+            /* Limit maximum size */
             margin-left: auto;
             margin-right: auto;
         }
+
         .btn-read {
             width: 100%;
         }
+
         .action-buttons {
             display: flex;
             justify-content: center;
             margin-top: 1rem;
         }
+
         /* Chapter list styles */
         .chapter-list {
             max-height: 500px;
             overflow-y: auto;
         }
+
         .chapter-item {
             cursor: pointer;
             padding: 10px;
             border-bottom: 1px solid #eee;
             transition: background-color 0.2s;
         }
+
         .chapter-item:hover {
             background-color: #f8f9fa;
         }
+
         .chapter-read-options {
             position: absolute;
             top: 0;
@@ -88,35 +105,42 @@
             display: none;
             background-color: white;
             border-radius: 4px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             z-index: 100;
             overflow: hidden;
         }
+
         .chapter-item-container {
             position: relative;
         }
+
         .chapter-item-container:hover .chapter-read-options {
             display: block;
         }
+
         .chapter-read-option {
             padding: 8px 15px;
             cursor: pointer;
             white-space: nowrap;
             transition: background-color 0.2s;
         }
+
         .chapter-read-option:hover {
             background-color: #f0f0f0;
         }
+
         /* Page viewer styles */
         .page-viewer {
             max-height: 70vh;
             overflow-y: auto;
             text-align: center;
         }
+
         .comic-page {
             max-width: 100%;
             margin-bottom: 10px;
         }
+
         /* Page-by-page mode styles */
         .page-by-page-mode .page-viewer {
             overflow: hidden;
@@ -127,6 +151,7 @@
             align-items: center;
             background-color: #f0f0f0;
         }
+
         .page-by-page-mode .comic-page {
             max-height: 70vh;
             max-width: 100%;
@@ -136,6 +161,7 @@
             transition: transform 0.3s ease;
             margin: 0 auto;
         }
+
         .page-by-page-mode .comic-page.active {
             display: block;
             position: absolute;
@@ -143,18 +169,22 @@
             left: 50%;
             transform: translate(-50%, -50%);
         }
+
         .zoomed {
             cursor: zoom-out !important;
         }
+
         .zoomable {
             cursor: zoom-in;
         }
+
         .zoom-controls {
             background-color: #fff;
             border: 1px solid #dee2e6;
             border-radius: 4px;
             padding: 5px 10px;
         }
+
         .zoom-btn {
             width: 28px;
             height: 28px;
@@ -168,24 +198,29 @@
             cursor: pointer;
             transition: background-color 0.2s;
         }
+
         .zoom-btn:hover {
             background-color: #f0f0f0;
         }
+
         .zoom-slider-container {
             display: flex;
             align-items: center;
             gap: 8px;
         }
+
         .zoom-level {
             min-width: 45px;
             text-align: center;
             font-size: 14px;
             color: #333;
         }
+
         .zoom-slider {
             width: 100px;
             cursor: pointer;
         }
+
         .page-navigation-overlay {
             position: absolute;
             top: 0;
@@ -194,12 +229,15 @@
             cursor: pointer;
             z-index: 10;
         }
+
         .page-navigation-overlay.left {
             left: 0;
         }
+
         .page-navigation-overlay.right {
             right: 0;
         }
+
         .page-indicator {
             position: absolute;
             bottom: 10px;
@@ -207,22 +245,25 @@
             right: 0;
             text-align: center;
             color: #333;
-            background-color: rgba(255,255,255,0.7);
+            background-color: rgba(255, 255, 255, 0.7);
             padding: 5px;
             font-size: 14px;
             z-index: 5;
         }
+
         .page-navigation {
             display: flex;
             justify-content: space-between;
             margin-top: 10px;
         }
+
         .loading-spinner {
             display: flex;
             justify-content: center;
             align-items: center;
             height: 200px;
         }
+
         /* User profile styles */
         .user-points {
             background-color: #ffd700;
@@ -233,17 +274,21 @@
             display: inline-flex;
             align-items: center;
         }
+
         .user-points i {
             margin-right: 6px;
             font-size: 1.1em;
         }
+
         .user-points-info {
             color: #ffd700;
             font-size: 0.9rem;
         }
+
         .user-points-info i {
             margin-right: 5px;
         }
+
         .user-avatar {
             width: 32px;
             height: 32px;
@@ -255,29 +300,36 @@
             color: white;
             font-weight: bold;
         }
+
         .dropdown-menu {
             min-width: 200px;
         }
+
         .dropdown-item {
             padding: 8px 16px;
         }
+
         .dropdown-item i {
             margin-right: 8px;
             width: 16px;
             text-align: center;
         }
+
         .user-info {
             padding: 8px 16px;
             border-bottom: 1px solid #dee2e6;
         }
+
         .user-name {
             font-weight: bold;
             margin-bottom: 4px;
         }
+
         .user-email {
             font-size: 0.875rem;
             color: #6c757d;
         }
+
         /* Add lock icon styling */
         .chapter-locked {
             color: #6c757d;
@@ -286,10 +338,12 @@
             opacity: 0.8;
             pointer-events: auto !important;
         }
+
         .lock-icon {
             color: #dc3545;
             margin-left: 5px;
         }
+
         /* Loading message styles */
         .loading-message {
             display: flex;
@@ -301,6 +355,7 @@
             margin-bottom: 15px;
             font-size: 0.9rem;
         }
+
         .payment-success-popup {
             position: fixed;
             top: 50%;
@@ -309,27 +364,30 @@
             background: white;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
             z-index: 1050;
             display: none;
         }
+
         .payment-success-popup .success-icon {
             color: #28a745;
             font-size: 48px;
             margin-bottom: 15px;
         }
+
         .popup-overlay {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0, 0, 0, 0.5);
             z-index: 1040;
             display: none;
         }
     </style>
 </head>
+
 <body class="bg-light">
     <div id="app">
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -340,10 +398,12 @@
                         <i class="fas fa-crown"></i> Subscribe
                     </button>
                     <div class="user-points me-3">
-                        <i class="bi bi-coin"></i> {{ currentUser && currentUser.points >= 99999999 ? 'Unlimited' : (currentUser ? currentUser.points : '...') }} Points
+                        <i class="bi bi-coin"></i> {{ currentUser && currentUser.points >= 99999999 ? 'Unlimited' :
+                        (currentUser ? currentUser.points : '...') }} Points
                     </div>
                     <div class="dropdown">
-                        <button class="btn btn-link text-white dropdown-toggle text-decoration-none" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <button class="btn btn-link text-white dropdown-toggle text-decoration-none" type="button"
+                            id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                             <span class="me-2">J</span>
                             John Doe
                         </button>
@@ -353,7 +413,8 @@
                                     <div class="user-name">{{ currentUser.name }}</div>
                                     <div class="user-email">{{ currentUser.email }}</div>
                                     <div class="user-points-info mt-2" v-if="currentUser.points !== undefined">
-                                        <i class="bi bi-coin"></i> <strong>{{ currentUser.points >= 99999999 ? 'Unlimited' : currentUser.points }}</strong> Points
+                                        <i class="bi bi-coin"></i> <strong>{{ currentUser.points >= 99999999 ?
+                                            'Unlimited' : currentUser.points }}</strong> Points
                                     </div>
                                 </div>
                             </li>
@@ -367,7 +428,9 @@
                                     </div>
                                 </div>
                             </li>
-                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
                             <li>
                                 <a class="dropdown-item" href="#">
                                     <i class="bi bi-bookmark"></i> Reading History
@@ -396,26 +459,22 @@
                             </span>
                             <h5 class="card-title">{{ comic.comic_name }}</h5>
                             <h6 class="card-subtitle mb-2 text-muted">By {{ comic.author }}</h6>
-                            
+
                             <div v-if="comic.comic_art" class="comic-image-container">
-                                <img :src="'data:image/webp;base64,' + comic.comic_art" 
-                                     class="comic-image" 
-                                     :alt="comic.comic_name"
-                                     @error="handleImageError($event, comic)">
+                                <img :src="'data:image/webp;base64,' + comic.comic_art" class="comic-image"
+                                    :alt="comic.comic_name" @error="handleImageError($event, comic)">
                             </div>
                             <div v-else class="image-placeholder">
                                 <span>No image available</span>
                             </div>
-                            
+
                             <div class="mb-3">
-                                <span v-for="genre in comic.genre" 
-                                      :key="genre" 
-                                      class="badge bg-secondary genre-badge">
+                                <span v-for="genre in comic.genre" :key="genre" class="badge bg-secondary genre-badge">
                                     {{ genre }}
                                 </span>
                             </div>
                             <p class="card-text">{{ comic.description }}</p>
-                            
+
                             <div class="action-buttons">
                                 <button class="btn btn-primary btn-read" @click="readComic(comic)">
                                     <i class="bi bi-book"></i> Read
@@ -432,7 +491,8 @@
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="comicModalLabel">{{ selectedComic ? selectedComic.comic_name : '' }}</h5>
+                        <h5 class="modal-title" id="comicModalLabel">{{ selectedComic ? selectedComic.comic_name : '' }}
+                        </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
@@ -451,17 +511,14 @@
                                         <i class="bi bi-arrow-clockwise me-1"></i> Refresh Status
                                     </button>
                                 </div>
-                                <div v-for="chapter in chapters" 
-                                     :key="chapter.chapter_id" 
-                                     class="chapter-item"
-                                     :class="{'chapter-locked': chapter.is_locked}"
-                                     @click="openChapterPage(chapter)">
+                                <div v-for="chapter in chapters" :key="chapter.chapter_id" class="chapter-item"
+                                    :class="{'chapter-locked': chapter.is_locked}" @click="openChapterPage(chapter)">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div>
                                             <strong>Chapter {{ chapter.chapter_number }}</strong>
                                             {{ chapter.title ? ': ' + chapter.title : '' }}
-                                            <i v-if="chapter.is_locked" class="bi bi-lock-fill lock-icon" 
-                                               title="This chapter is locked"></i>
+                                            <i v-if="chapter.is_locked" class="bi bi-lock-fill lock-icon"
+                                                title="This chapter is locked"></i>
                                         </div>
                                         <span v-if="!chapter.is_locked" class="badge bg-primary rounded-pill">
                                             <i class="bi bi-eye"></i> Read
@@ -508,13 +565,13 @@
             const overlay = document.getElementById('popupOverlay');
             if (popup) popup.style.display = 'none';
             if (overlay) overlay.style.display = 'none';
-            
+
             // Refresh the page to update points display
             window.location.reload();
         }
 
         // Add event listeners for popup
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const overlay = document.getElementById('popupOverlay');
             const continueBtn = document.getElementById('continueReadingBtn');
 
@@ -554,12 +611,12 @@
                         console.log('Attempting to fetch user data from http://localhost:5000/user/1');
                         const response = await fetch('http://localhost:5000/user/1');
                         console.log('Response status:', response.status);
-                        
+
                         if (response.ok) {
                             const data = await response.json();
                             console.log('User data received:', data);
                             currentUser.value = data;
-                            
+
                             // Force points display update
                             if (currentUser.value.points >= 99999999) {
                                 const pointsDisplays = document.querySelectorAll('.user-points, .user-points-info');
@@ -590,16 +647,16 @@
                         console.log('Attempting to fetch comics from http://localhost:5001/comic');
                         const response = await fetch('http://localhost:5001/comic');
                         console.log('Response status:', response.status);
-                        
+
                         if (!response.ok) {
                             const errorText = await response.text();
                             console.error('Error response:', errorText);
                             throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
                         }
-                        
+
                         comics.value = await response.json();
                         console.log(`Fetched ${comics.value.length} comics`);
-                        
+
                         // Load comic images separately
                         for (const comic of comics.value) {
                             if (!comic.comic_art) {
@@ -618,7 +675,7 @@
                 // Function to fetch a comic image
                 async function fetchComicImage(comic) {
                     const response = await fetch(`http://localhost:5001/comic/${comic.comic_id}/image`);
-                    
+
                     if (response.ok) {
                         const data = await response.json();
                         if (data.image) {
@@ -629,7 +686,7 @@
 
                 // Function to get status badge color
                 function getStatusBadgeClass(status) {
-                    switch(status.toLowerCase()) {
+                    switch (status.toLowerCase()) {
                         case 'ongoing':
                             return 'bg-success';
                         case 'completed':
@@ -651,106 +708,52 @@
                 async function readComic(comic) {
                     console.log(`Reading comic with ID: ${comic.comic_id}`);
                     selectedComic.value = comic;
-                    
+
                     // Show loading indicator
                     loadingChapters.value = true;
                     chapters.value = [];
-                    
+
                     // Show modal
                     if (!comicModal) {
                         comicModal = new bootstrap.Modal(document.getElementById('comicModal'));
                     }
                     comicModal.show();
-                    
-                    // Fetch chapters with locked status
+
                     try {
                         // Get current user ID (assuming user 1 for now)
                         const userId = currentUser.value ? currentUser.value.id : 1;
-                        
-                        // First, get all chapters for the comic
-                        const chaptersResponse = await fetch(`http://localhost:5005/api/comics/${comic.comic_id}/chapters`);
-                        
-                        if (!chaptersResponse.ok) {
-                            throw new Error(`HTTP error! status: ${chaptersResponse.status}`);
+
+                        // Call the composite microservice instead of fetching directly
+                        const response = await fetch(`http://localhost:5020/api/read_comic/${comic.comic_id}/user/${userId}`);
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
                         }
-                        
-                        const chaptersData = await chaptersResponse.json();
-                        console.log('All chapters data:', chaptersData);
-                        
-                        // Get the user's reading history
-                        const historyResponse = await fetch(`http://localhost:5014/api/history/user/${userId}`);
-                        const historyData = await historyResponse.json();
-                        
-                        // Create set of read chapter IDs
-                        const readChapterIds = new Set();
-                        if (historyResponse.ok && historyData.history) {
-                            historyData.history.forEach(entry => {
-                                if (entry.chapter_id) {
-                                    readChapterIds.add(entry.chapter_id);
-                                }
-                            });
-                        }
-                        
-                        console.log('Read chapter IDs:', Array.from(readChapterIds));
-                        
-                        // Process chapters to add correct locked status
-                        const processedChapters = chaptersData.chapters.map(chapter => {
-                            // A chapter is unlocked if it's in the reading history
-                            const isUnlocked = readChapterIds.has(chapter.chapter_id);
-                            
-                            return {
-                                ...chapter,
-                                is_locked: !isUnlocked
-                            };
-                        });
-                        
-                        // Sort chapters in descending order by chapter number
-                        chapters.value = processedChapters.sort((a, b) => {
-                            const aNum = parseFloat(a.chapter_number);
-                            const bNum = parseFloat(b.chapter_number);
-                            return bNum - aNum; // Descending order
-                        });
+
+                        const data = await response.json();
+                        console.log('Processed chapters data:', data);
+
+                        // Update chapters list
+                        chapters.value = data.chapters;
+
                     } catch (error) {
                         console.error('Error fetching chapters:', error);
-                        
-                        // Fallback to regular chapter fetch if the above fails
-                        try {
-                            const fallbackResponse = await fetch(`http://localhost:5005/api/comics/${comic.comic_id}/chapters`);
-                            
-                            if (!fallbackResponse.ok) {
-                                throw new Error(`HTTP error! status: ${fallbackResponse.status}`);
-                            }
-                            
-                            const fallbackData = await fallbackResponse.json();
-                            console.log('Fallback chapters data:', fallbackData);
-                            
-                            // Just display all chapters without lock information in fallback mode
-                            chapters.value = fallbackData.chapters.map(chapter => ({
-                                ...chapter,
-                                is_locked: false // Show all as unlocked in fallback mode
-                            })).sort((a, b) => {
-                                const aNum = parseFloat(a.chapter_number);
-                                const bNum = parseFloat(b.chapter_number);
-                                return bNum - aNum; // Descending order
-                            });
-                        } catch (fallbackError) {
-                            console.error('Error with fallback chapter fetch:', fallbackError);
-                        }
                     } finally {
                         loadingChapters.value = false;
                     }
                 }
+
 
                 // Function to open chapter in a new page
                 function openChapterPage(chapter) {
                     // If chapter is locked, handle the locked chapter flow
                     if (chapter.is_locked) {
                         // Get current user data for the locked chapter prompt
-                    const userId = currentUser.value ? currentUser.value.id : 1;
+                        const userId = currentUser.value ? currentUser.value.id : 1;
                         const userPoints = currentUser.value ? currentUser.value.points : 0;
                         const unlockCost = 100; // Standard unlock cost
                         const canAfford = userPoints >= unlockCost;
-                        
+
                         // Prepare data for the locked chapter handler
                         const lockData = {
                             can_afford: canAfford,
@@ -761,32 +764,32 @@
                             comic_id: selectedComic.value ? selectedComic.value.comic_id : null,
                             title: chapter.title
                         };
-                        
+
                         // Show locked chapter prompt
                         handleLockedChapter(chapter, lockData);
                         return;
                     }
-                    
+
                     // Chapter is unlocked, navigate directly to the reader
                     const chapterId = chapter.chapter_id;
                     const chapterNumber = chapter.chapter_number;
                     const title = chapter.title || '';
                     const comicId = selectedComic.value ? selectedComic.value.comic_id : null;
-                    
+
                     // Construct the URL for the chapter reader
                     const readerUrl = `chapter-reader.html?chapter_id=${chapterId}&chapter_number=${chapterNumber}&title=${encodeURIComponent(title)}&comic_id=${comicId}&purchased=true`;
-                    
+
                     // Navigate to the chapter reader
                     window.location.href = readerUrl;
                 }
-                
+
                 // Function to handle locked chapter prompt
                 function handleLockedChapter(chapter, data) {
                     // Close any existing modal
                     if (comicModal) {
                         comicModal.hide();
                     }
-                    
+
                     // Create purchase dialog element
                     const purchaseDialog = document.createElement('div');
                     purchaseDialog.className = 'modal fade';
@@ -794,7 +797,7 @@
                     purchaseDialog.setAttribute('tabindex', '-1');
                     purchaseDialog.setAttribute('aria-labelledby', 'purchaseModalLabel');
                     purchaseDialog.setAttribute('aria-hidden', 'true');
-                    
+
                     purchaseDialog.innerHTML = `
                         <div class="modal-dialog modal-dialog-centered">
                             <div class="modal-content" style="background-color: #fff9db; border-radius: 8px;">
@@ -823,17 +826,17 @@
                                     </div>
                                 </div>
                                 <div class="modal-footer border-0 d-flex flex-column">
-                                    ${data.can_afford 
-                                        ? `<button id="purchaseBtn" class="btn btn-success w-100 mb-2 d-flex align-items-center justify-content-center">
+                                    ${data.can_afford
+                            ? `<button id="purchaseBtn" class="btn btn-success w-100 mb-2 d-flex align-items-center justify-content-center">
                                             <i class="bi bi-unlock me-2"></i> Unlock for ${data.unlock_cost} points
                                            </button>`
-                                        : `<button disabled class="btn btn-danger w-100 mb-2 d-flex align-items-center justify-content-center" style="opacity: 0.8;">
+                            : `<button disabled class="btn btn-danger w-100 mb-2 d-flex align-items-center justify-content-center" style="opacity: 0.8;">
                                             <i class="bi bi-exclamation-triangle me-2"></i> Insufficient points
                                            </button>
                                            <a href="subscribe.html" class="btn btn-primary w-100 mb-2 d-flex align-items-center justify-content-center">
                                             <i class="bi bi-plus-circle me-2"></i> Get More Points
                                            </a>`
-                                    }
+                        }
                                     <button type="button" class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center" data-bs-dismiss="modal">
                                         <i class="bi bi-x me-2"></i> Cancel
                                     </button>
@@ -841,14 +844,14 @@
                             </div>
                         </div>
                     `;
-                    
+
                     // Add the dialog to the document
                     document.body.appendChild(purchaseDialog);
-                    
+
                     // Initialize and show the modal
                     const purchaseModal = new bootstrap.Modal(document.getElementById('purchaseModal'));
                     purchaseModal.show();
-                    
+
                     // Add event listener for purchase button
                     if (data.can_afford) {
                         document.getElementById('purchaseBtn').addEventListener('click', () => {
@@ -856,17 +859,17 @@
                             purchaseChapter(chapter.chapter_id, data);
                         });
                     }
-                    
+
                     // Clean up when the modal is hidden
                     document.getElementById('purchaseModal').addEventListener('hidden.bs.modal', function () {
                         document.body.removeChild(document.getElementById('purchaseModal'));
                     });
                 }
-                
+
                 // Function to purchase chapter access
                 function purchaseChapter(chapterId, data) {
                     const userId = currentUser.value ? currentUser.value.id : 1;
-                    
+
                     // Create and show processing dialog
                     const processingDialog = document.createElement('div');
                     processingDialog.className = 'modal fade';
@@ -874,7 +877,7 @@
                     processingDialog.setAttribute('tabindex', '-1');
                     processingDialog.setAttribute('data-bs-backdrop', 'static');
                     processingDialog.setAttribute('data-bs-keyboard', 'false');
-                    
+
                     processingDialog.innerHTML = `
                         <div class="modal-dialog modal-dialog-centered">
                             <div class="modal-content">
@@ -888,71 +891,71 @@
                             </div>
                         </div>
                     `;
-                    
+
                     document.body.appendChild(processingDialog);
                     const processingModal = new bootstrap.Modal(document.getElementById('processingModal'));
                     processingModal.show();
-                    
+
                     console.log(`Purchasing chapter ${chapterId} for user ${userId}`);
-                    
+
                     fetch(`http://localhost:5020/purchase/${chapterId}/user/${userId}`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
                         }
                     })
-                    .then(response => {
-                        console.log('Purchase response received:', response.status);
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        console.log('Purchase result:', data);
-                        
-                        // Hide processing modal
-                        processingModal.hide();
-                        
-                        if (data.status === 'success') {
-                            // Show success dialog
-                            showPurchaseSuccessDialog(data, chapterId);
-                            
-                            // Update user points in the UI
-                            if (currentUser.value) {
-                                currentUser.value.points = data.points_remaining;
+                        .then(response => {
+                            console.log('Purchase response received:', response.status);
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
                             }
-                            
-                            // Also update the chapters list to reflect the purchase
-                            if (selectedComic.value) {
-                                for (const chapter of chapters.value) {
-                                    if (chapter.chapter_id === chapterId) {
-                                        console.log(`Unlocking chapter ${chapterId} in UI`);
-                                        chapter.is_locked = false;
-                                        break;
+                            return response.json();
+                        })
+                        .then(data => {
+                            console.log('Purchase result:', data);
+
+                            // Hide processing modal
+                            processingModal.hide();
+
+                            if (data.status === 'success') {
+                                // Show success dialog
+                                showPurchaseSuccessDialog(data, chapterId);
+
+                                // Update user points in the UI
+                                if (currentUser.value) {
+                                    currentUser.value.points = data.points_remaining;
+                                }
+
+                                // Also update the chapters list to reflect the purchase
+                                if (selectedComic.value) {
+                                    for (const chapter of chapters.value) {
+                                        if (chapter.chapter_id === chapterId) {
+                                            console.log(`Unlocking chapter ${chapterId} in UI`);
+                                            chapter.is_locked = false;
+                                            break;
+                                        }
                                     }
                                 }
+                            } else if (data.status === 'insufficient_funds') {
+                                showInsufficientFundsDialog();
+                            } else {
+                                console.error('Unexpected response from purchase service:', data);
+                                showErrorDialog('Error processing your purchase. Please try again.');
                             }
-                        } else if (data.status === 'insufficient_funds') {
-                            showInsufficientFundsDialog();
-                        } else {
-                            console.error('Unexpected response from purchase service:', data);
-                            showErrorDialog('Error processing your purchase. Please try again.');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error purchasing chapter:', error);
-                        processingModal.hide();
-                        showErrorDialog('Error purchasing chapter. Please try again.');
-                    })
-                    .finally(() => {
-                        // Clean up processing modal
-                        document.getElementById('processingModal').addEventListener('hidden.bs.modal', function () {
-                            if (document.getElementById('processingModal')) {
-                                document.body.removeChild(document.getElementById('processingModal'));
-                            }
+                        })
+                        .catch(error => {
+                            console.error('Error purchasing chapter:', error);
+                            processingModal.hide();
+                            showErrorDialog('Error purchasing chapter. Please try again.');
+                        })
+                        .finally(() => {
+                            // Clean up processing modal
+                            document.getElementById('processingModal').addEventListener('hidden.bs.modal', function () {
+                                if (document.getElementById('processingModal')) {
+                                    document.body.removeChild(document.getElementById('processingModal'));
+                                }
+                            });
                         });
-                    });
                 }
 
                 // Show purchase success dialog
@@ -962,12 +965,12 @@
                     if (!redirectUrl && data.chapter_number && data.comic_id) {
                         redirectUrl = `chapter-reader.html?chapter_id=${chapterId}&chapter_number=${data.chapter_number}&title=${encodeURIComponent(data.title || '')}&comic_id=${data.comic_id}&purchased=true`;
                     }
-                    
+
                     // Update user points in the UI before redirecting
                     if (currentUser.value) {
                         currentUser.value.points = data.points_remaining;
                     }
-                    
+
                     // Redirect immediately
                     window.location.href = redirectUrl;
                 }
@@ -978,7 +981,7 @@
                     errorDialog.className = 'modal fade';
                     errorDialog.id = 'insufficientFundsModal';
                     errorDialog.setAttribute('tabindex', '-1');
-                    
+
                     errorDialog.innerHTML = `
                         <div class="modal-dialog modal-dialog-centered">
                             <div class="modal-content" style="background-color: #f8d7da; border-radius: 8px;">
@@ -1003,11 +1006,11 @@
                             </div>
                         </div>
                     `;
-                    
+
                     document.body.appendChild(errorDialog);
                     const errorModal = new bootstrap.Modal(document.getElementById('insufficientFundsModal'));
                     errorModal.show();
-                    
+
                     // Clean up when the modal is hidden
                     document.getElementById('insufficientFundsModal').addEventListener('hidden.bs.modal', function () {
                         document.body.removeChild(document.getElementById('insufficientFundsModal'));
@@ -1020,7 +1023,7 @@
                     errorDialog.className = 'modal fade';
                     errorDialog.id = 'errorModal';
                     errorDialog.setAttribute('tabindex', '-1');
-                    
+
                     errorDialog.innerHTML = `
                         <div class="modal-dialog modal-dialog-centered">
                             <div class="modal-content" style="background-color: #f8d7da; border-radius: 8px;">
@@ -1042,11 +1045,11 @@
                             </div>
                         </div>
                     `;
-                    
+
                     document.body.appendChild(errorDialog);
                     const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
                     errorModal.show();
-                    
+
                     // Clean up when the modal is hidden
                     document.getElementById('errorModal').addEventListener('hidden.bs.modal', function () {
                         document.body.removeChild(document.getElementById('errorModal'));
@@ -1056,17 +1059,17 @@
                 // Function to refresh chapters
                 async function refreshChapters() {
                     if (!selectedComic.value) return;
-                    
+
                     loadingChapters.value = true;
-                    
+
                     try {
                         // Clear the chapter data cache
                         await fetch(`http://localhost:5015/cache/clear`, {
                             method: 'POST'
                         });
-                        
+
                         console.log('Cache cleared, refreshing chapters');
-                        
+
                         // Re-fetch chapters with updated status
                         await readComic(selectedComic.value);
                     } catch (error) {
@@ -1108,4 +1111,5 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-</html> 
+
+</html>
