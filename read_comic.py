@@ -17,100 +17,60 @@ CHAPTER_READER_URL = "chapter-reader.html"
 # Configuration
 UNLOCK_COST = 100  # Points required to unlock a chapter
 
-@app.route('/read/<int:chapter_id>/user/<int:user_id>', methods=['GET'])
-def process_chapter_access(chapter_id, user_id):
+@app.route('/api/read_comic/<int:comic_id>/user/<int:user_id>', methods=['GET'])
+def read_comic(comic_id, user_id):
     """
-    Composite microservice that:
-    1. Checks if a chapter is accessible using verify_history
-    2. If unlocked, redirects to chapter and updates history
-    3. If locked, returns data to prompt payment
+    Composite service to fetch comic chapters and determine their locked status.
     """
     try:
-        # 1. Check if chapter is already accessible
-        verify_response = requests.get(f"{VERIFY_SERVICE_URL}/{chapter_id}/user/{user_id}")
-        
-        if not verify_response.ok:
+        # Fetch all chapters for the comic
+        chapters_response = requests.get(f"http://localhost:5005/api/comics/{comic_id}/chapters")
+        if not chapters_response.ok:
             return jsonify({
-                "error": "Failed to verify chapter access",
-                "status": verify_response.status_code,
-                "message": verify_response.text
+                "error": "Failed to fetch comic chapters",
+                "status": chapters_response.status_code,
+                "message": chapters_response.text
             }), 500
-            
-        verify_data = verify_response.json()
         
-        # 1.5 Get chapter details for the redirect URL
-        chapter_response = requests.get(f"http://localhost:5005/api/chapters/{chapter_id}")
-        if not chapter_response.ok:
+        chapters_data = chapters_response.json()
+        
+        # Fetch user's reading history
+        history_response = requests.get(f"http://localhost:5014/api/history/user/{user_id}")
+        if not history_response.ok:
             return jsonify({
-                "error": "Failed to fetch chapter details",
-                "status": chapter_response.status_code,
-                "message": chapter_response.text
+                "error": "Failed to fetch user reading history",
+                "status": history_response.status_code,
+                "message": history_response.text
             }), 500
-            
-        chapter_data = chapter_response.json()
-        comic_id = chapter_data.get("comic_id", "1")
-        chapter_number = chapter_data.get("chapter_number", "1")
-        chapter_title = chapter_data.get("title", "")
         
-        # 2. If chapter is already accessible, update history and redirect
-        if verify_data.get("is_accessible", False):
-            # Update read history (do this in background without waiting for response)
-            try:
-                requests.post(
-                    f"{HISTORY_SERVICE_URL}/add", 
-                    json={"user_id": user_id, "chapter_id": chapter_id},
-                    timeout=1  # Short timeout since we don't need to wait
-                )
-            except requests.exceptions.RequestException:
-                # Log but continue even if history update fails
-                print(f"Warning: Failed to update history for user {user_id}, chapter {chapter_id}")
-                
-            # Return success with redirect URL
-            return jsonify({
-                "status": "success",
-                "message": "Chapter is accessible",
-                "redirect_url": f"{CHAPTER_READER_URL}?chapter_id={chapter_id}&chapter_number={chapter_number}&title={urllib.parse.quote(chapter_title)}&comic_id={comic_id}&purchased=true",
-                "is_accessible": True
-            })
+        history_data = history_response.json()
         
-        # 3. If chapter is locked, check user balance
-        user_response = requests.get(f"{USER_SERVICE_URL}/{user_id}")
-        
-        if not user_response.ok:
-            return jsonify({
-                "error": "Failed to fetch user data",
-                "status": user_response.status_code,
-                "message": user_response.text,
-                "is_accessible": False
-            }), 500
-            
-        user_data = user_response.json()
-        user_points = user_data.get("points", 0)
-        
-        # 4. Return purchase information
-        return jsonify({
-            "status": "locked",
-            "message": "Chapter requires payment to unlock",
-            "is_accessible": False,
-            "chapter_id": chapter_id,
-            "chapter_number": chapter_number,
-            "comic_id": comic_id,
-            "title": chapter_title,
-            "unlock_cost": UNLOCK_COST,
-            "user_points": user_points,
-            "can_afford": user_points >= UNLOCK_COST
-        })
-            
+        # Create a set of read chapter IDs
+        read_chapter_ids = set()
+        if history_data.get("history"):
+            for entry in history_data["history"]:
+                if "chapter_id" in entry:
+                    read_chapter_ids.add(entry["chapter_id"])
+
+        # Process chapters to determine locked status
+        processed_chapters = [
+            {
+                **chapter,
+                "is_locked": chapter["chapter_id"] not in read_chapter_ids
+            }
+            for chapter in chapters_data["chapters"]
+        ]
+
+        # Sort chapters in descending order
+        processed_chapters.sort(key=lambda c: float(c["chapter_number"]), reverse=True)
+
+        return jsonify({"chapters": processed_chapters})
+    
     except requests.exceptions.RequestException as e:
-        return jsonify({
-            "error": f"Service communication error: {str(e)}",
-            "is_accessible": False
-        }), 500
+        return jsonify({"error": f"Service communication error: {str(e)}"}), 500
     except Exception as e:
-        return jsonify({
-            "error": f"Unexpected error: {str(e)}",
-            "is_accessible": False
-        }), 500
+        return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
+
 
 @app.route('/purchase/<int:chapter_id>/user/<int:user_id>', methods=['POST'])
 def purchase_chapter_access(chapter_id, user_id):
