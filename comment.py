@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import mysql.connector
 from datetime import datetime
+import requests
 
 app = Flask(__name__)
 CORS(app)
@@ -14,8 +15,34 @@ db_config = {
     'database': 'comments_db'
 }
 
+# Thread service URL
+THREAD_SERVICE_URL = "http://localhost:5011"
+
 def get_db_connection():
     return mysql.connector.connect(**db_config)
+
+def update_thread_comment_count(thread_id):
+    """Update the comment count in the thread service"""
+    try:
+        # First get the current count of comments for this thread
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM comments WHERE thread_id = %s", (thread_id,))
+        count = cursor.fetchone()[0]
+        cursor.close()
+        conn.close()
+
+        # Update the count in the thread service
+        response = requests.put(
+            f"{THREAD_SERVICE_URL}/thread/{thread_id}/comments/count",
+            json={"count": count}
+        )
+        
+        if not response.ok:
+            print(f"Failed to update thread comment count: {response.text}")
+            
+    except Exception as e:
+        print(f"Error updating thread comment count: {str(e)}")
 
 # Get comments for a thread
 @app.route('/comments/thread/<int:thread_id>', methods=['GET'])
@@ -85,6 +112,11 @@ def create_comment():
         
         cursor.execute(query, values)
         conn.commit()
+        
+        # Update the thread's comment count
+        thread_id = data.get('thread_id')
+        if thread_id:
+            update_thread_comment_count(thread_id)
         
         return jsonify({
             'message': 'Comment created successfully',
