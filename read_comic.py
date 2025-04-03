@@ -13,6 +13,7 @@ VERIFY_SERVICE_URL = "http://localhost:5015/verify/chapter"
 HISTORY_SERVICE_URL = "http://localhost:5014/api/history"
 USER_SERVICE_URL = "http://localhost:5000/user"
 CHAPTER_READER_URL = "chapter-reader.html"
+VERIFY_SERVICE_URL2 = "http://localhost:5015/verify/comic/{}/user/{}"
 
 # Configuration
 UNLOCK_COST = 100  # Points required to unlock a chapter
@@ -20,52 +21,31 @@ UNLOCK_COST = 100  # Points required to unlock a chapter
 @app.route('/api/read_comic/<int:comic_id>/user/<int:user_id>', methods=['GET'])
 def read_comic(comic_id, user_id):
     """
-    Composite service to fetch comic chapters and determine their locked status.
+    Calls verify history service to fetch comic chapters and their locked status.
     """
     try:
-        # Fetch all chapters for the comic
-        chapters_response = requests.get(f"http://localhost:5005/api/comics/{comic_id}/chapters")
-        if not chapters_response.ok:
-            return jsonify({
-                "error": "Failed to fetch comic chapters",
-                "status": chapters_response.status_code,
-                "message": chapters_response.text
-            }), 500
-        
-        chapters_data = chapters_response.json()
-        
-        # Fetch user's reading history
-        history_response = requests.get(f"http://localhost:5014/api/history/user/{user_id}")
-        if not history_response.ok:
-            return jsonify({
-                "error": "Failed to fetch user reading history",
-                "status": history_response.status_code,
-                "message": history_response.text
-            }), 500
-        
-        history_data = history_response.json()
-        
-        # Create a set of read chapter IDs
-        read_chapter_ids = set()
-        if history_data.get("history"):
-            for entry in history_data["history"]:
-                if "chapter_id" in entry:
-                    read_chapter_ids.add(entry["chapter_id"])
+        # Call verify_chapter_access via VERIFY_SERVICE_URL
+        verify_url = VERIFY_SERVICE_URL2.format(comic_id, user_id)
+        verify_response = requests.get(verify_url)
 
-        # Process chapters to determine locked status
-        processed_chapters = [
-            {
-                **chapter,
-                "is_locked": chapter["chapter_id"] not in read_chapter_ids
-            }
-            for chapter in chapters_data["chapters"]
-        ]
+        if not verify_response.ok:
+            return jsonify({
+                "error": "Failed to fetch verification data",
+                "status": verify_response.status_code,
+                "message": verify_response.text
+            }), 500
 
-        # Sort chapters in descending order
-        processed_chapters.sort(key=lambda c: float(c["chapter_number"]), reverse=True)
+        verify_data = verify_response.json()
+
+        # Extract and sort chapters in descending order by chapter number
+        processed_chapters = sorted(
+            verify_data.get("chapters", []),
+            key=lambda c: float(c["chapter_number"]),
+            reverse=True
+        )
 
         return jsonify({"chapters": processed_chapters})
-    
+
     except requests.exceptions.RequestException as e:
         return jsonify({"error": f"Service communication error: {str(e)}"}), 500
     except Exception as e:

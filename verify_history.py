@@ -56,6 +56,61 @@ def fetch_history(user_id):
         return response.json().get("history", [])
     return []
 
+
+@app.route('/verify/comic/<int:comic_id>/user/<int:user_id>', methods=['GET'])
+def read_comic(comic_id, user_id):
+    """
+    Composite service to fetch comic chapters and determine their locked status.
+    """
+    try:
+        # Fetch all chapters for the comic
+        chapters_response = requests.get(f"http://localhost:5005/api/comics/{comic_id}/chapters")
+        if not chapters_response.ok:
+            return jsonify({
+                "error": "Failed to fetch comic chapters",
+                "status": chapters_response.status_code,
+                "message": chapters_response.text
+            }), 500
+        
+        chapters_data = chapters_response.json()
+        
+        # Fetch user's reading history
+        history_response = requests.get(f"http://localhost:5014/api/history/user/{user_id}")
+        if not history_response.ok:
+            return jsonify({
+                "error": "Failed to fetch user reading history",
+                "status": history_response.status_code,
+                "message": history_response.text
+            }), 500
+        
+        history_data = history_response.json()
+        
+        # Create a set of read chapter IDs
+        read_chapter_ids = set()
+        if history_data.get("history"):
+            for entry in history_data["history"]:
+                if "chapter_id" in entry:
+                    read_chapter_ids.add(entry["chapter_id"])
+
+        # Process chapters to determine locked status
+        processed_chapters = [
+            {
+                **chapter,
+                "is_locked": chapter["chapter_id"] not in read_chapter_ids
+            }
+            for chapter in chapters_data["chapters"]
+        ]
+
+        # Sort chapters in descending order
+        processed_chapters.sort(key=lambda c: float(c["chapter_number"]), reverse=True)
+
+        return jsonify({"chapters": processed_chapters})
+    
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": f"Service communication error: {str(e)}"}), 500
+    except Exception as e:
+        return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
+
 @app.route('/verify/comic/<int:comic_id>/user/<int:user_id>', methods=['GET'])
 def verify_chapter_access(comic_id, user_id):
     """
