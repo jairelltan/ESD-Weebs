@@ -267,7 +267,7 @@
             padding-bottom: 0;
             transition: all 0.3s ease;
             position: relative;
-            z-index: 2;
+            z-index: 20; /* Increased z-index to be higher than navigation overlays */
             background-color: #f5f5f5;
             pointer-events: auto;
             margin-bottom: 60px; /* Match the height of the nav bar */
@@ -339,18 +339,6 @@
         }
         .page-by-page-mode .bottom-page-tracker {
             display: flex;
-        }
-    </style>
-    <!-- Override page tracker display styles -->
-    <style>
-        /* Always show bottom page tracker regardless of reading mode */
-        .bottom-page-tracker {
-            display: flex !important;
-        }
-        
-        /* Hide the top page tracker since we're using the bottom one */
-        #pageTracker {
-            display: none !important;
         }
     </style>
 </head>
@@ -566,7 +554,7 @@
                                     <hr style="border: none; border-top: 1px solid #e6d292; margin: 20px 0;">
                                     
                                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                        <span>Chapter ${chapterNumber}${title ? ': ' + title : ''}</span>
+                                        <span>Chapter ${chapterNumber}: ${title || 'Untitled'}</span>
                                         <span style="background-color: #0d6efd; color: white; padding: 5px 10px; border-radius: 20px; font-size: 14px;">${unlockCost} points</span>
                                     </div>
                                     
@@ -958,7 +946,7 @@
                         <hr style="border: none; border-top: 1px solid #e6d292; margin: 20px 0;">
                         
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                            <span>Chapter ${chapterNumber}${title ? ': ' + title : ''}</span>
+                            <span>Chapter ${chapterNumber}: ${title || 'Untitled'}</span>
                             <span style="background-color: #0d6efd; color: white; padding: 5px 10px; border-radius: 20px; font-size: 14px;">${unlockCost} points</span>
                         </div>
                         
@@ -1023,47 +1011,38 @@
             // Default user ID (could be fetched from localStorage in a real app)
             const userId = 1;
             
-            // First get chapter details to ensure we have the title
-            fetch(`http://localhost:5005/api/chapters/${chapterId}`)
-                .then(response => response.json())
-                .then(chapterData => {
-                    // Use the title from chapter data if available
-                    const chapterTitle = chapterData.title || title;
-                    const chapterNum = chapterData.chapter_number || chapterNumber;
+            // Call the more efficient single chapter verification endpoint
+            fetch(`http://localhost:5015/verify/chapter/${chapterId}/user/${userId}`)
+                .then(response => {
+                    console.log('Verification response status:', response.status);
+                    if (!response.ok) {
+                        console.error('Failed to verify chapter access', response.status);
+                        // If service fails, we allow access to prevent blocking the user
+                        callback(true);
+                        return null;
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data === null) return; // Early return if there was an error
                     
-                    // Now check access
-                    return fetch(`http://localhost:5015/verify/chapter/${chapterId}/user/${userId}`)
-                        .then(response => {
-                            console.log('Verification response status:', response.status);
-                            if (!response.ok) {
-                                console.error('Failed to verify chapter access', response.status);
-                                // If service fails, we allow access to prevent blocking the user
-                                callback(true);
-                                return null;
-                            }
-                            return response.json();
-                        })
-                        .then(data => {
-                            if (data === null) return; // Early return if there was an error
-                            
-                            console.log('Verification data:', data);
-                            
-                            if (!data) {
-                                console.error('Invalid response from verify service', data);
-                                callback(true);
-                                return;
-                            }
-                            
-                            // Check if the chapter is accessible
-                            if (data.is_accessible) {
-                                console.log('Chapter is accessible');
-                                callback(true);
-                            } else {
-                                console.log('Chapter is not accessible, showing purchase dialog');
-                                // Pass the chapter title from our chapter data
-                                callback(false, chapterId, chapterNum, chapterTitle);
-                            }
-                        });
+                    console.log('Verification data:', data);
+                    
+                    if (!data) {
+                        console.error('Invalid response from verify service', data);
+                        callback(true);
+                        return;
+                    }
+                    
+                    // Check if the chapter is accessible
+                    if (data.is_accessible) {
+                        console.log('Chapter is accessible');
+                        callback(true);
+                    } else {
+                        console.log('Chapter is not accessible, showing purchase dialog');
+                        // Instead of just showing an alert, display the purchase dialog
+                        callback(false, chapterId, chapterNumber, title);
+                    }
                 })
                 .catch(error => {
                     console.error('Error validating chapter access:', error);
@@ -1697,6 +1676,12 @@
                 threadContainer.style.display = 'block';
                 toggleBtn.classList.add('active');
                 
+                // Disable page navigation overlays temporarily
+                document.querySelectorAll('.page-navigation-overlay').forEach(overlay => {
+                    overlay.style.pointerEvents = 'none';
+                    overlay.style.display = 'none';
+                });
+                
                 // Scroll to threads container
                 threadContainer.scrollIntoView({ behavior: 'smooth' });
                 
@@ -1708,6 +1693,14 @@
                 // Hide threads and remove highlight
                 threadContainer.style.display = 'none';
                 toggleBtn.classList.remove('active');
+                
+                // Re-enable page navigation overlays
+                if (currentReadingMode === 'page') {
+                    document.querySelectorAll('.page-navigation-overlay').forEach(overlay => {
+                        overlay.style.pointerEvents = 'auto';
+                        overlay.style.display = 'block';
+                    });
+                }
                 
                 // Scroll back to comic if we're below it
                 document.getElementById('pageViewer').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
