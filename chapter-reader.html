@@ -496,6 +496,11 @@
 
             currentChapterId = chapterId;
             
+            // Cache the current chapter ID
+            localStorage.setItem('cached_chapter_id', chapterId);
+            localStorage.setItem('cached_chapter_number', chapterNumber);
+            localStorage.setItem('cached_chapter_title', title || '');
+            
             // Update title
             document.title = `Chapter ${chapterNumber}${title ? ': ' + title : ''}`;
             document.getElementById('chapter-title').textContent = `Chapter ${chapterNumber}${title ? ': ' + title : ''}`;
@@ -509,9 +514,20 @@
                 
                 // Skip verification if the chapter was just purchased
                 if (!purchased) {
-                    // Verify chapter access first
-                    const userId = 1; // Should be fetched from user session
-                    const verifyResponse = await fetch(`http://localhost:5015/verify/chapter/${chapterId}/user/${userId}`);
+                    // Get cached user ID or use default
+                    const userId = localStorage.getItem('cached_user_id') || 1;
+                    
+                    // Check if we need to refresh the history data (from URL parameter)
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const refreshHistory = urlParams.get('refresh') === 'true';
+                    
+                    // Verify chapter access first with refresh parameter
+                    const verifyUrl = refreshHistory ? 
+                        `http://localhost:5015/verify/chapter/${chapterId}/user/${userId}?refresh=true` : 
+                        `http://localhost:5015/verify/chapter/${chapterId}/user/${userId}`;
+                    
+                    console.log(`Verifying chapter access with${refreshHistory ? ' refresh=true' : ' cached history'}`);
+                    const verifyResponse = await fetch(verifyUrl);
                     
                     if (verifyResponse.ok) {
                         const verifyData = await verifyResponse.json();
@@ -520,12 +536,22 @@
                         if (!verifyData.is_accessible) {
                             document.getElementById('loading').style.display = 'none';
                             
-                            // Get user data to check points
-                            const userResponse = await fetch(`http://localhost:5000/user/${userId}`);
-                            if (!userResponse.ok) {
-                                throw new Error('Failed to fetch user data');
+                            // Get cached user data or fetch if not available
+                            let userData;
+                            const cachedUserData = localStorage.getItem('cached_user_data');
+                            
+                            if (cachedUserData) {
+                                userData = JSON.parse(cachedUserData);
+                                console.log('Using cached user data');
+                            } else {
+                                // Fallback to fetch if cache is not available
+                                const userResponse = await fetch(`http://localhost:5000/user/${userId}`);
+                                if (!userResponse.ok) {
+                                    throw new Error('Failed to fetch user data');
+                                }
+                                userData = await userResponse.json();
+                                console.log('Fetched fresh user data');
                             }
-                            const userData = await userResponse.json();
                             
                             // Get chapter details
                             const chapterResponse = await fetch(`http://localhost:5005/api/chapters/${chapterId}`);
@@ -612,37 +638,43 @@
                 } else {
                     console.log('Bypassing verification check for recently purchased chapter');
                     
-                    // Record reading this chapter to history service
-                    try {
-                        const userId = 1; // Should be fetched from user session
-                        const historyData = {
-                            user_id: userId,
-                            chapter_id: parseInt(chapterId),
-                            read_timestamp: new Date().toISOString()
-                        };
-                        
-                        // Add to reading history to ensure future access
-                        fetch('http://localhost:5014/api/history', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(historyData)
-                        })
-                        .then(response => {
-                            if (response.ok) {
-                                console.log('Successfully added chapter to reading history');
-                            } else {
-                                console.error('Failed to add chapter to reading history');
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error updating reading history:', error);
-                        });
-                    } catch (historyError) {
-                        console.error('Error updating reading history:', historyError);
-                        // Continue even if history update fails
-                    }
+                    // Record reading this chapter to history service after 10 seconds of viewing to ensure it's recorded properly
+                    setTimeout(() => {
+                        // Record reading this chapter to history service if not already done
+                        try {
+                            // Get cached user ID or use default
+                            const userId = localStorage.getItem('cached_user_id') || 1;
+                            // Use the cached chapter ID
+                            const chapterId = localStorage.getItem('cached_chapter_id') || currentChapterId;
+                            
+                            const historyData = {
+                                user_id: parseInt(userId),
+                                chapter_id: parseInt(chapterId),
+                                read_timestamp: new Date().toISOString()
+                            };
+                            
+                            // Add to reading history to ensure future access
+                            fetch('http://localhost:5014/api/history', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify(historyData)
+                            })
+                            .then(response => {
+                                if (response.ok) {
+                                    console.log('Successfully recorded chapter in reading history');
+                                } else {
+                                    console.error('Failed to record chapter in reading history');
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error updating reading history:', error);
+                            });
+                        } catch (historyError) {
+                            console.error('Error updating reading history:', historyError);
+                        }
+                    }, 10000); // Update after 10 seconds of reading
                 }
                 
                 // Get chapter details from chapter service
@@ -763,7 +795,20 @@
 
         // Function to purchase a chapter directly from the reader
         function purchaseChapter(chapterId, chapterNumber, title) {
-            const userId = 1; // Should be fetched from user session
+            // Get cached user ID or use default
+            const userId = localStorage.getItem('cached_user_id') || 1;
+            
+            // Get cached user data if available
+            let cachedUserData = null;
+            try {
+                const userDataString = localStorage.getItem('cached_user_data');
+                if (userDataString) {
+                    cachedUserData = JSON.parse(userDataString);
+                    console.log('Using cached user data for purchase:', cachedUserData);
+                }
+            } catch (error) {
+                console.error('Error parsing cached user data:', error);
+            }
             
             // Show processing state
             const purchaseBtn = document.getElementById('purchaseBtn');
@@ -777,11 +822,15 @@
             
             console.log(`Purchasing chapter ${chapterId} for user ${userId}`);
             
+            // Create request payload with cached user data
+            const requestData = cachedUserData ? { user_data: cachedUserData } : {};
+            
             fetch(`http://localhost:5020/purchase/${chapterId}/user/${userId}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
-                }
+                },
+                body: JSON.stringify(requestData)
             })
             .then(response => {
                 console.log('Purchase response received:', response.status);
@@ -792,6 +841,15 @@
             })
             .then(data => {
                 console.log('Purchase result:', data);
+                
+                // Cache the updated user points
+                const cachedUserData = localStorage.getItem('cached_user_data');
+                if (cachedUserData) {
+                    const userData = JSON.parse(cachedUserData);
+                    userData.points = data.points_remaining;
+                    localStorage.setItem('cached_user_data', JSON.stringify(userData));
+                    console.log('Updated cached user points:', data.points_remaining);
+                }
                 
                 if (data.status === 'success') {
                     // Show success message
@@ -880,9 +938,7 @@
             // Direct navigation for testing purposes if shift key is pressed
             if (event && event.shiftKey) {
                 console.log('Shift key pressed, bypassing validation');
-                const urlParams = new URLSearchParams(window.location.search);
-                const purchased = urlParams.get('purchased') === 'true' ? '&purchased=true' : '';
-                const url = `chapter-reader.html?chapter_id=${chapterId}&chapter_number=${chapterNumber}&title=${encodeURIComponent(title || '')}&comic_id=${comicId}${purchased}`;
+                const url = `chapter-reader.html?chapter_id=${chapterId}&chapter_number=${chapterNumber}&title=${encodeURIComponent(title || '')}&comic_id=${comicId}`;
                 console.log('Navigating directly to:', url);
                 window.location.href = url;
                 return;
@@ -905,7 +961,8 @@
                     const purchased = urlParams.get('purchased') === 'true' ? '&purchased=true' : '';
                     
                     // Navigate to chapter if unlocked, preserving the purchased parameter
-                    const url = `chapter-reader.html?chapter_id=${chapterId}&chapter_number=${chapterNumber}&title=${encodeURIComponent(title || '')}&comic_id=${comicId}${purchased}`;
+                    const url = `chapter-reader.html?chapter_id=${chapterId}&chapter_number=${chapterNumber}&title=${encodeURIComponent(title || '')}&comic_id=${comicId}`;
+                    
                     console.log('Navigating to unlocked chapter:', url);
                     window.location.href = url;
                 }, chapterNumber, title);
@@ -918,13 +975,23 @@
         // Function to show purchase dialog for a locked chapter
         async function showPurchaseDialog(chapterId, chapterNumber, title) {
             try {
-                // Get user data to check points
-                const userId = 1; // Should be fetched from user session
-                const userResponse = await fetch(`http://localhost:5000/user/${userId}`);
-                if (!userResponse.ok) {
-                    throw new Error('Failed to fetch user data');
+                // Get cached user data or fetch if not available
+                let userData;
+                const cachedUserData = localStorage.getItem('cached_user_data');
+                const userId = localStorage.getItem('cached_user_id') || 1;
+                
+                if (cachedUserData) {
+                    userData = JSON.parse(cachedUserData);
+                    console.log('Using cached user data for purchase dialog');
+                } else {
+                    // Fallback to fetch if cache is not available
+                    const userResponse = await fetch(`http://localhost:5000/user/${userId}`);
+                    if (!userResponse.ok) {
+                        throw new Error('Failed to fetch user data');
+                    }
+                    userData = await userResponse.json();
+                    console.log('Fetched fresh user data for purchase dialog');
                 }
-                const userData = await userResponse.json();
                 
                 // Show purchase dialog
                 const unlockCost = 100; // Points required to unlock
@@ -946,7 +1013,7 @@
                         <hr style="border: none; border-top: 1px solid #e6d292; margin: 20px 0;">
                         
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                            <span>Chapter ${chapterNumber}: ${title || 'Untitled'}</span>
+                            <span>Chapter ${chapterNumber}${title ? ': ' + title : ''}</span>
                             <span style="background-color: #0d6efd; color: white; padding: 5px 10px; border-radius: 20px; font-size: 14px;">${unlockCost} points</span>
                         </div>
                         
@@ -1009,10 +1076,15 @@
             console.log('Validating chapter access for:', { chapterId, chapterNumber, title });
             
             // Default user ID (could be fetched from localStorage in a real app)
-            const userId = 1;
+            const userId = localStorage.getItem('cached_user_id') || 1;
+            
+            // For in-reader navigation, we use cached history to ensure smooth experience
+            // Do NOT use refresh=true here as we want seamless chapter-to-chapter navigation
+            const verifyUrl = `http://localhost:5015/verify/chapter/${chapterId}/user/${userId}`;
+            console.log('Using cached history for in-reader chapter validation');
             
             // Call the more efficient single chapter verification endpoint
-            fetch(`http://localhost:5015/verify/chapter/${chapterId}/user/${userId}`)
+            fetch(verifyUrl)
                 .then(response => {
                     console.log('Verification response status:', response.status);
                     if (!response.ok) {

@@ -397,24 +397,22 @@
                     <button class="btn btn-primary me-3" @click="goToSubscribe">
                         <i class="fas fa-crown"></i> Subscribe
                     </button>
-                    <div class="user-points me-3">
-                        <i class="bi bi-coin"></i> {{ currentUser && currentUser.points >= 99999999 ? 'Unlimited' :
-                        (currentUser ? currentUser.points : '...') }} Points
+                    <div class="user-points me-3" style="background-color: #ffd700; color: #000; padding: 6px 12px; border-radius: 20px; font-weight: bold; min-width: 100px; text-align: center;">
+                        <i class="bi bi-coin"></i> {{ userPoints }} Points
                     </div>
                     <div class="dropdown">
                         <button class="btn btn-link text-white dropdown-toggle text-decoration-none" type="button"
                             id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                            <span class="me-2">J</span>
-                            John Doe
+                            <span class="me-2">{{ userInitial }}</span>
+                            {{ userName }}
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li v-if="currentUser">
                                 <div class="user-info">
-                                    <div class="user-name">{{ currentUser.name }}</div>
-                                    <div class="user-email">{{ currentUser.email }}</div>
-                                    <div class="user-points-info mt-2" v-if="currentUser.points !== undefined">
-                                        <i class="bi bi-coin"></i> <strong>{{ currentUser.points >= 99999999 ?
-                                            'Unlimited' : currentUser.points }}</strong> Points
+                                    <div class="user-name">{{ userName }}</div>
+                                    <div class="user-email">{{ userEmail }}</div>
+                                    <div class="user-points-info mt-2">
+                                        <i class="bi bi-coin"></i> <strong>{{ userPoints }}</strong> Points
                                     </div>
                                 </div>
                             </li>
@@ -539,6 +537,29 @@
         </div>
     </div>
 
+    <!-- Add reusable modals -->
+    <div class="modal fade" id="genericModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" id="genericModalContent">
+                <!-- Content will be dynamically set -->
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="processingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center py-4">
+                    <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <h5>Processing Purchase</h5>
+                    <p class="text-muted">Please wait while we process your purchase...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="popup-overlay" id="popupOverlay"></div>
     <div class="payment-success-popup text-center" id="paymentSuccessPopup">
         <div class="success-icon">
@@ -594,7 +615,7 @@
             }
         });
 
-        const { createApp, ref, onMounted } = Vue;
+        const { createApp, ref, onMounted, computed } = Vue;
 
         createApp({
             setup() {
@@ -604,40 +625,88 @@
                 const selectedComic = ref(null);
                 const currentUser = ref(null);
                 let comicModal = null;
+                const UNLOCK_COST = 100; // Standard cost to unlock a chapter
+                
+                // Computed properties for user data
+                const userPoints = computed(() => {
+                    if (!currentUser.value) {
+                        return "...";
+                    }
+                    return currentUser.value.points >= 99999999 ? 'Unlimited' : currentUser.value.points;
+                });
+                
+                const userName = computed(() => {
+                    return currentUser.value?.name || "Loading...";
+                });
+                
+                const userInitial = computed(() => {
+                    return currentUser.value?.name?.charAt(0) || "?";
+                });
+                
+                const userEmail = computed(() => {
+                    return currentUser.value?.email || "No email";
+                });
 
                 // Function to fetch user data
                 async function fetchUserData() {
                     try {
-                        console.log('Attempting to fetch user data from http://localhost:5000/user/1');
-                        const response = await fetch('http://localhost:5000/user/1');
-                        console.log('Response status:', response.status);
-
+                        console.log('Checking for cached user data');
+                        
+                        // Get cached user data with timestamp to check freshness
+                        const cachedUserData = localStorage.getItem('cached_user_data');
+                        const cachedTimestamp = localStorage.getItem('cached_user_timestamp');
+                        const userId = localStorage.getItem('cached_user_id') || "1";
+                        
+                        // Check if cache is valid (less than 5 minutes old)
+                        const now = new Date().getTime();
+                        const cacheAge = cachedTimestamp ? now - parseInt(cachedTimestamp) : Infinity;
+                        const cacheValid = cachedUserData && cacheAge < 300000; // 5 minutes
+                        
+                        // Hard refresh or cache invalid - fetch fresh data
+                        const isHardRefresh = performance && performance.navigation ? 
+                            performance.navigation.type === 1 : false;
+                            
+                        if (cacheValid && !isHardRefresh) {
+                            // Use cached data
+                            console.log('Using cached user data, age:', Math.round(cacheAge/1000), 'seconds');
+                            currentUser.value = JSON.parse(cachedUserData);
+                            return;
+                        }
+                        
+                        // Need to fetch fresh data
+                        console.log('Fetching fresh user data for ID:', userId);
+                        const response = await fetch(`http://localhost:5000/user/${userId}`);
+                        
                         if (response.ok) {
                             const data = await response.json();
-                            console.log('User data received:', data);
+                            
+                            // Validate data has required fields
+                            if (typeof data.id === 'undefined' || data.points === undefined) {
+                                throw new Error('Invalid user data received');
+                            }
+                            
+                            // Update current user and cache
                             currentUser.value = data;
-
-                            // Force points display update
-                            if (currentUser.value.points >= 99999999) {
-                                const pointsDisplays = document.querySelectorAll('.user-points, .user-points-info');
-                                pointsDisplays.forEach(display => {
-                                    const pointsText = display.querySelector('strong') || display;
-                                    if (pointsText) {
-                                        pointsText.textContent = 'Unlimited Points';
-                                    }
-                                });
-                            }
+                            localStorage.setItem('cached_user_id', data.id.toString());
+                            localStorage.setItem('cached_user_data', JSON.stringify(data));
+                            localStorage.setItem('cached_user_timestamp', now.toString());
+                            console.log('User data cached with fresh timestamp');
                         } else {
-                            console.error('Failed to fetch user data - Status:', response.status);
-                            try {
-                                const errorText = await response.text();
-                                console.error('Error response:', errorText);
-                            } catch (e) {
-                                console.error('Could not read error response');
-                            }
+                            throw new Error(`HTTP error! status: ${response.status}`);
                         }
                     } catch (error) {
                         console.error('Error fetching user data:', error);
+                        
+                        // Use cached data as fallback if available
+                        const cachedUserData = localStorage.getItem('cached_user_data');
+                        if (cachedUserData) {
+                            try {
+                                currentUser.value = JSON.parse(cachedUserData);
+                                console.log('Using cached data as fallback after error');
+                            } catch (e) {
+                                console.error('Error parsing cached data:', e);
+                            }
+                        }
                     }
                 }
 
@@ -720,10 +789,18 @@
                     comicModal.show();
 
                     try {
-                        // Get current user ID (assuming user 1 for now)
-                        const userId = currentUser.value ? currentUser.value.id : 1;
+                        // Get user ID from cache or current user
+                        const cachedUserId = localStorage.getItem('cached_user_id');
+                        
+                        if (!cachedUserId && !currentUser.value) {
+                            console.error('No user ID available - cannot fetch chapters');
+                            throw new Error('User ID not available');
+                        }
+                        
+                        const userId = cachedUserId ? parseInt(cachedUserId) : currentUser.value.id;
+                        console.log(`Using user ID: ${userId} for comic ${comic.comic_id}`);
 
-                        // Call the composite microservice instead of fetching directly
+                        // Call the composite microservice - use cached data by default (no refresh parameter)
                         const response = await fetch(`http://localhost:5020/api/read_comic/${comic.comic_id}/user/${userId}`);
 
                         if (!response.ok) {
@@ -743,16 +820,24 @@
                     }
                 }
 
-
                 // Function to open chapter in a new page
                 function openChapterPage(chapter) {
                     // If chapter is locked, handle the locked chapter flow
                     if (chapter.is_locked) {
                         // Get current user data for the locked chapter prompt
-                        const userId = currentUser.value ? currentUser.value.id : 1;
-                        const userPoints = currentUser.value ? currentUser.value.points : 0;
-                        const unlockCost = 100; // Standard unlock cost
+                        const cachedUserId = localStorage.getItem('cached_user_id');
+                        
+                        // If we don't have a user ID from cache or currentUser, use default (1)
+                        const userId = cachedUserId ? parseInt(cachedUserId) : (currentUser.value ? currentUser.value.id : 1);
+                        
+                        // Get points from currentUser - default to 0 if not available
+                        const userPoints = currentUser.value && currentUser.value.points !== undefined ? 
+                            currentUser.value.points : 0;
+                            
+                        const unlockCost = UNLOCK_COST; // Use the constant
                         const canAfford = userPoints >= unlockCost;
+
+                        console.log(`Processing locked chapter access for user ID: ${userId}, Points: ${userPoints}`);
 
                         // Prepare data for the locked chapter handler
                         const lockData = {
@@ -775,9 +860,15 @@
                     const chapterNumber = chapter.chapter_number;
                     const title = chapter.title || '';
                     const comicId = selectedComic.value ? selectedComic.value.comic_id : null;
-
-                    // Construct the URL for the chapter reader
-                    const readerUrl = `chapter-reader.html?chapter_id=${chapterId}&chapter_number=${chapterNumber}&title=${encodeURIComponent(title)}&comic_id=${comicId}&purchased=true`;
+                    
+                    // Save chapter info to localStorage
+                    localStorage.setItem('cached_chapter_id', chapterId.toString());
+                    localStorage.setItem('cached_chapter_number', chapterNumber.toString());
+                    localStorage.setItem('cached_chapter_title', title);
+                    
+                    // Construct the URL for the chapter reader without refresh parameter
+                    // This will use cached history for better performance
+                    const readerUrl = `chapter-reader.html?chapter_id=${chapterId}&chapter_number=${chapterNumber}&title=${encodeURIComponent(title)}&comic_id=${comicId}`;
 
                     // Navigate to the chapter reader
                     window.location.href = readerUrl;
@@ -790,119 +881,122 @@
                         comicModal.hide();
                     }
 
-                    // Create purchase dialog element
-                    const purchaseDialog = document.createElement('div');
-                    purchaseDialog.className = 'modal fade';
-                    purchaseDialog.id = 'purchaseModal';
-                    purchaseDialog.setAttribute('tabindex', '-1');
-                    purchaseDialog.setAttribute('aria-labelledby', 'purchaseModalLabel');
-                    purchaseDialog.setAttribute('aria-hidden', 'true');
-
-                    purchaseDialog.innerHTML = `
-                        <div class="modal-dialog modal-dialog-centered">
-                            <div class="modal-content" style="background-color: #fff9db; border-radius: 8px;">
-                                <div class="modal-header border-0">
-                                    <h5 class="modal-title" id="purchaseModalLabel" style="color: #664d00;">Chapter Locked</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    const content = `
+                        <div class="modal-header border-0">
+                            <h5 class="modal-title" id="purchaseModalLabel" style="color: #664d00;">Chapter Locked</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body text-center" style="background-color: #fff9db;">
+                            <p style="margin-bottom: 20px;">You need to unlock this chapter first to read it.</p>
+                            <hr style="border: none; border-top: 1px solid #e6d292; margin: 20px 0;">
+                            
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <span>Chapter ${chapter.chapter_number}${chapter.title ? ': ' + chapter.title : ''}</span>
+                                <span style="background-color: #0d6efd; color: white; padding: 5px 10px; border-radius: 20px; font-size: 14px;">${data.unlock_cost} points</span>
+                            </div>
+                            
+                            <div style="margin-bottom: 25px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                    <span>Your balance:</span>
+                                    <span style="font-weight: bold;">${data.user_points} points</span>
                                 </div>
-                                <div class="modal-body text-center">
-                                    <p style="margin-bottom: 20px;">You need to unlock this chapter first to read it.</p>
-                                    <hr style="border: none; border-top: 1px solid #e6d292; margin: 20px 0;">
-                                    
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                        <span>Chapter ${chapter.chapter_number}${chapter.title ? ': ' + chapter.title : ''}</span>
-                                        <span style="background-color: #0d6efd; color: white; padding: 5px 10px; border-radius: 20px; font-size: 14px;">${data.unlock_cost} points</span>
-                                    </div>
-                                    
-                                    <div style="margin-bottom: 25px;">
-                                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                            <span>Your balance:</span>
-                                            <span style="font-weight: bold;">${data.user_points} points</span>
-                                        </div>
-                                        <div style="display: flex; justify-content: space-between;">
-                                            <span>After purchase:</span>
-                                            <span style="font-weight: bold; ${data.can_afford ? 'color: #664d00' : 'color: #dc3545'}">${data.user_points - data.unlock_cost} points</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="modal-footer border-0 d-flex flex-column">
-                                    ${data.can_afford
-                            ? `<button id="purchaseBtn" class="btn btn-success w-100 mb-2 d-flex align-items-center justify-content-center">
-                                            <i class="bi bi-unlock me-2"></i> Unlock for ${data.unlock_cost} points
-                                           </button>`
-                            : `<button disabled class="btn btn-danger w-100 mb-2 d-flex align-items-center justify-content-center" style="opacity: 0.8;">
-                                            <i class="bi bi-exclamation-triangle me-2"></i> Insufficient points
-                                           </button>
-                                           <a href="subscribe.html" class="btn btn-primary w-100 mb-2 d-flex align-items-center justify-content-center">
-                                            <i class="bi bi-plus-circle me-2"></i> Get More Points
-                                           </a>`
-                        }
-                                    <button type="button" class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center" data-bs-dismiss="modal">
-                                        <i class="bi bi-x me-2"></i> Cancel
-                                    </button>
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span>After purchase:</span>
+                                    <span style="font-weight: bold; ${data.can_afford ? 'color: #664d00' : 'color: #dc3545'}">${data.user_points - data.unlock_cost} points</span>
                                 </div>
                             </div>
                         </div>
+                        <div class="modal-footer border-0 d-flex flex-column">
+                            ${data.can_afford
+                        ? `<button id="purchaseBtn" class="btn btn-success w-100 mb-2 d-flex align-items-center justify-content-center">
+                                        <i class="bi bi-unlock me-2"></i> Unlock for ${data.unlock_cost} points
+                                       </button>`
+                        : `<button disabled class="btn btn-danger w-100 mb-2 d-flex align-items-center justify-content-center" style="opacity: 0.8;">
+                                        <i class="bi bi-exclamation-triangle me-2"></i> Insufficient points
+                                       </button>
+                                       <a href="subscribe.html" class="btn btn-primary w-100 mb-2 d-flex align-items-center justify-content-center">
+                                        <i class="bi bi-plus-circle me-2"></i> Get More Points
+                                       </a>`
+                    }
+                            <button type="button" class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center" data-bs-dismiss="modal">
+                                <i class="bi bi-x me-2"></i> Cancel
+                            </button>
+                        </div>
                     `;
-
-                    // Add the dialog to the document
-                    document.body.appendChild(purchaseDialog);
-
-                    // Initialize and show the modal
-                    const purchaseModal = new bootstrap.Modal(document.getElementById('purchaseModal'));
-                    purchaseModal.show();
-
+                    
+                    // Update modal content
+                    document.getElementById('genericModalContent').innerHTML = content;
+                    
+                    // Show the modal
+                    const genericModal = new bootstrap.Modal(document.getElementById('genericModal'));
+                    genericModal.show();
+                    
                     // Add event listener for purchase button
                     if (data.can_afford) {
                         document.getElementById('purchaseBtn').addEventListener('click', () => {
-                            purchaseModal.hide();
+                            genericModal.hide();
                             purchaseChapter(chapter.chapter_id, data);
                         });
                     }
-
-                    // Clean up when the modal is hidden
-                    document.getElementById('purchaseModal').addEventListener('hidden.bs.modal', function () {
-                        document.body.removeChild(document.getElementById('purchaseModal'));
-                    });
                 }
 
                 // Function to purchase chapter access
                 function purchaseChapter(chapterId, data) {
-                    const userId = currentUser.value ? currentUser.value.id : 1;
+                    // Get user ID from cache or current user, default to 1 if not available
+                    const cachedUserId = localStorage.getItem('cached_user_id');
+                    const userId = cachedUserId ? parseInt(cachedUserId) : (currentUser.value ? currentUser.value.id : 1);
+                    
+                    // Get points directly from data.user_points which should already be defaulted correctly
+                    const userPoints = data.user_points;
+                    
+                    // Verify again that user has enough points
+                    if (userPoints < data.unlock_cost) {
+                        console.error(`Insufficient points. User has ${userPoints}, needed ${data.unlock_cost}`);
+                        showInsufficientFundsDialog();
+                        return;
+                    }
+                    
+                    console.log(`Purchasing chapter ${chapterId} for user ${userId}, current points: ${userPoints}`);
+                    
+                    // Get cached user data for the request
+                    let cachedUserData = null;
+                    try {
+                        const userDataString = localStorage.getItem('cached_user_data');
+                        if (userDataString) {
+                            cachedUserData = JSON.parse(userDataString);
+                            // Ensure the points field exists
+                            if (cachedUserData.points === undefined) {
+                                cachedUserData.points = userPoints; // Use the points from lockData
+                            }
+                            console.log('Using cached user data for purchase, user ID:', userId, 'Points:', cachedUserData.points);
+                        }
+                    } catch (error) {
+                        console.error('Error parsing cached user data:', error);
+                        cachedUserData = null;
+                    }
 
-                    // Create and show processing dialog
-                    const processingDialog = document.createElement('div');
-                    processingDialog.className = 'modal fade';
-                    processingDialog.id = 'processingModal';
-                    processingDialog.setAttribute('tabindex', '-1');
-                    processingDialog.setAttribute('data-bs-backdrop', 'static');
-                    processingDialog.setAttribute('data-bs-keyboard', 'false');
-
-                    processingDialog.innerHTML = `
-                        <div class="modal-dialog modal-dialog-centered">
-                            <div class="modal-content">
-                                <div class="modal-body text-center py-4">
-                                    <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                                    <h5>Processing Purchase</h5>
-                                    <p class="text-muted">Please wait while we process your purchase...</p>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-
-                    document.body.appendChild(processingDialog);
+                    // Show the processing modal
                     const processingModal = new bootstrap.Modal(document.getElementById('processingModal'));
                     processingModal.show();
-
-                    console.log(`Purchasing chapter ${chapterId} for user ${userId}`);
+                    
+                    // Create default user data if not available
+                    if (!cachedUserData) {
+                        cachedUserData = {
+                            id: userId,
+                            points: userPoints,
+                            name: "User" // Basic default name
+                        };
+                    }
+                    
+                    // Prepare the request body with cached user data
+                    const requestData = { user_data: cachedUserData };
 
                     fetch(`http://localhost:5020/purchase/${chapterId}/user/${userId}`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
-                        }
+                        },
+                        body: JSON.stringify(requestData)
                     })
                         .then(response => {
                             console.log('Purchase response received:', response.status);
@@ -918,12 +1012,26 @@
                             processingModal.hide();
 
                             if (data.status === 'success') {
+                                // Validate points data from response
+                                if (typeof data.points_remaining === 'undefined') {
+                                    console.error('Purchase response missing points_remaining field:', data);
+                                    data.points_remaining = currentUser.value.points - UNLOCK_COST; // Fallback calculation
+                                }
+                                
+                                // Update cached user data with new points balance
+                                if (cachedUserData) {
+                                    cachedUserData.points = data.points_remaining;
+                                    localStorage.setItem('cached_user_data', JSON.stringify(cachedUserData));
+                                    console.log('Updated cached user points:', data.points_remaining);
+                                }
+                                
                                 // Show success dialog
                                 showPurchaseSuccessDialog(data, chapterId);
 
                                 // Update user points in the UI
                                 if (currentUser.value) {
                                     currentUser.value.points = data.points_remaining;
+                                    console.log('Updated current user points to:', data.points_remaining);
                                 }
 
                                 // Also update the chapters list to reflect the purchase
@@ -947,14 +1055,6 @@
                             console.error('Error purchasing chapter:', error);
                             processingModal.hide();
                             showErrorDialog('Error purchasing chapter. Please try again.');
-                        })
-                        .finally(() => {
-                            // Clean up processing modal
-                            document.getElementById('processingModal').addEventListener('hidden.bs.modal', function () {
-                                if (document.getElementById('processingModal')) {
-                                    document.body.removeChild(document.getElementById('processingModal'));
-                                }
-                            });
                         });
                 }
 
@@ -977,83 +1077,57 @@
 
                 // Show insufficient funds dialog
                 function showInsufficientFundsDialog() {
-                    const errorDialog = document.createElement('div');
-                    errorDialog.className = 'modal fade';
-                    errorDialog.id = 'insufficientFundsModal';
-                    errorDialog.setAttribute('tabindex', '-1');
-
-                    errorDialog.innerHTML = `
-                        <div class="modal-dialog modal-dialog-centered">
-                            <div class="modal-content" style="background-color: #f8d7da; border-radius: 8px;">
-                                <div class="modal-header border-0">
-                                    <h5 class="modal-title" style="color: #842029;">Insufficient Points</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body text-center">
-                                    <div class="mb-3" style="font-size: 3rem; color: #842029;">
-                                        <i class="bi bi-exclamation-triangle-fill"></i>
-                                    </div>
-                                    <p>You don't have enough points to unlock this chapter.</p>
-                                </div>
-                                <div class="modal-footer border-0 d-flex flex-column">
-                                    <a href="subscription.html" class="btn btn-primary w-100 mb-2">
-                                        <i class="bi bi-plus-circle me-2"></i> Get More Points
-                                    </a>
-                                    <button type="button" class="btn btn-outline-secondary w-100" data-bs-dismiss="modal">
-                                        <i class="bi bi-x me-2"></i> Close
-                                    </button>
-                                </div>
+                    const content = `
+                        <div class="modal-header border-0">
+                            <h5 class="modal-title" style="color: #842029;">Insufficient Points</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body text-center" style="background-color: #f8d7da; border-radius: 8px;">
+                            <div class="mb-3" style="font-size: 3rem; color: #842029;">
+                                <i class="bi bi-exclamation-triangle-fill"></i>
                             </div>
+                            <p>You don't have enough points to unlock this chapter.</p>
+                        </div>
+                        <div class="modal-footer border-0 d-flex flex-column">
+                            <a href="subscription.html" class="btn btn-primary w-100 mb-2">
+                                <i class="bi bi-plus-circle me-2"></i> Get More Points
+                            </a>
+                            <button type="button" class="btn btn-outline-secondary w-100" data-bs-dismiss="modal">
+                                <i class="bi bi-x me-2"></i> Close
+                            </button>
                         </div>
                     `;
-
-                    document.body.appendChild(errorDialog);
-                    const errorModal = new bootstrap.Modal(document.getElementById('insufficientFundsModal'));
-                    errorModal.show();
-
-                    // Clean up when the modal is hidden
-                    document.getElementById('insufficientFundsModal').addEventListener('hidden.bs.modal', function () {
-                        document.body.removeChild(document.getElementById('insufficientFundsModal'));
-                    });
+                    
+                    // Update modal content and show it
+                    document.getElementById('genericModalContent').innerHTML = content;
+                    const genericModal = new bootstrap.Modal(document.getElementById('genericModal'));
+                    genericModal.show();
                 }
 
                 // Show generic error dialog
                 function showErrorDialog(message) {
-                    const errorDialog = document.createElement('div');
-                    errorDialog.className = 'modal fade';
-                    errorDialog.id = 'errorModal';
-                    errorDialog.setAttribute('tabindex', '-1');
-
-                    errorDialog.innerHTML = `
-                        <div class="modal-dialog modal-dialog-centered">
-                            <div class="modal-content" style="background-color: #f8d7da; border-radius: 8px;">
-                                <div class="modal-header border-0">
-                                    <h5 class="modal-title" style="color: #842029;">Error</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body text-center">
-                                    <div class="mb-3" style="font-size: 3rem; color: #842029;">
-                                        <i class="bi bi-x-circle-fill"></i>
-                                    </div>
-                                    <p>${message}</p>
-                                </div>
-                                <div class="modal-footer border-0">
-                                    <button type="button" class="btn btn-danger w-100" data-bs-dismiss="modal">
-                                        <i class="bi bi-arrow-clockwise me-2"></i> Try Again
-                                    </button>
-                                </div>
+                    const content = `
+                        <div class="modal-header border-0">
+                            <h5 class="modal-title" style="color: #842029;">Error</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body text-center" style="background-color: #f8d7da; border-radius: 8px;">
+                            <div class="mb-3" style="font-size: 3rem; color: #842029;">
+                                <i class="bi bi-x-circle-fill"></i>
                             </div>
+                            <p>${message}</p>
+                        </div>
+                        <div class="modal-footer border-0">
+                            <button type="button" class="btn btn-danger w-100" data-bs-dismiss="modal">
+                                <i class="bi bi-arrow-clockwise me-2"></i> Try Again
+                            </button>
                         </div>
                     `;
-
-                    document.body.appendChild(errorDialog);
-                    const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
-                    errorModal.show();
-
-                    // Clean up when the modal is hidden
-                    document.getElementById('errorModal').addEventListener('hidden.bs.modal', function () {
-                        document.body.removeChild(document.getElementById('errorModal'));
-                    });
+                    
+                    // Update modal content and show it
+                    document.getElementById('genericModalContent').innerHTML = content;
+                    const genericModal = new bootstrap.Modal(document.getElementById('genericModal'));
+                    genericModal.show();
                 }
 
                 // Function to refresh chapters
@@ -1063,18 +1137,27 @@
                     loadingChapters.value = true;
 
                     try {
-                        // Clear the chapter data cache
-                        await fetch(`http://localhost:5015/cache/clear`, {
-                            method: 'POST'
-                        });
+                        console.log('Refreshing chapters with fresh history data');
+                        
+                        // Get user ID
+                        const cachedUserId = localStorage.getItem('cached_user_id');
+                        const userId = cachedUserId ? parseInt(cachedUserId) : (currentUser.value ? currentUser.value.id : 1);
+                        
+                        // Call the API with refresh=true to force fresh history data
+                        const response = await fetch(`http://localhost:5020/api/read_comic/${selectedComic.value.comic_id}/user/${userId}?refresh=true`);
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
 
-                        console.log('Cache cleared, refreshing chapters');
+                        const data = await response.json();
+                        console.log('Refreshed chapters data:', data);
 
-                        // Re-fetch chapters with updated status
-                        await readComic(selectedComic.value);
+                        // Update chapters list
+                        chapters.value = data.chapters;
                     } catch (error) {
                         console.error('Error refreshing chapters:', error);
-                        alert('Failed to refresh chapter status. Please try again.');
+                        showErrorDialog('Failed to refresh chapter status. Please try again.');
                     } finally {
                         loadingChapters.value = false;
                     }
@@ -1087,9 +1170,26 @@
 
                 // Initialize when the component is mounted
                 onMounted(() => {
+                    console.log('Vue component mounted');
                     fetchComics();
                     fetchUserData();
                     comicModal = new bootstrap.Modal(document.getElementById('comicModal'));
+                    
+                    // Add reload listener
+                    window.addEventListener('load', () => {
+                        console.log('Window load event - refreshing user data');
+                        fetchUserData();
+                    });
+                    
+                    // Force an update after a short delay
+                    setTimeout(() => {
+                        console.log('Forcing update check after mount');
+                        if (currentUser.value) {
+                            console.log('User data available on mount:', currentUser.value.points, 'points');
+                        } else {
+                            console.log('User data not yet available on mount');
+                        }
+                    }, 500);
                 });
 
                 return {
@@ -1098,6 +1198,10 @@
                     loadingChapters,
                     selectedComic,
                     currentUser,
+                    userPoints,
+                    userName,
+                    userInitial,
+                    userEmail,
                     getStatusBadgeClass,
                     handleImageError,
                     readComic,

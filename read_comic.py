@@ -24,10 +24,17 @@ def read_comic(comic_id, user_id):
     Calls verify history service to fetch comic chapters and their locked status.
     """
     try:
+        # Check if refresh parameter is present
+        refresh = request.args.get('refresh', 'false').lower() == 'true'
+        
         # Call verify_chapter_access via VERIFY_SERVICE_URL
         verify_url = VERIFY_SERVICE_URL2.format(comic_id, user_id)
+        if refresh:
+            verify_url += "?refresh=true"
+        
+        print(f"Calling verification service with URL: {verify_url}")
         verify_response = requests.get(verify_url)
-
+        
         if not verify_response.ok:
             return jsonify({
                 "error": "Failed to fetch verification data",
@@ -35,16 +42,8 @@ def read_comic(comic_id, user_id):
                 "message": verify_response.text
             }), 500
 
-        verify_data = verify_response.json()
-
-        # Extract and sort chapters in descending order by chapter number
-        processed_chapters = sorted(
-            verify_data.get("chapters", []),
-            key=lambda c: float(c["chapter_number"]),
-            reverse=True
-        )
-
-        return jsonify({"chapters": processed_chapters})
+        # Return data as-is from verify service (already sorted)
+        return verify_response.json()
 
     except requests.exceptions.RequestException as e:
         return jsonify({"error": f"Service communication error: {str(e)}"}), 500
@@ -56,26 +55,38 @@ def read_comic(comic_id, user_id):
 def purchase_chapter_access(chapter_id, user_id):
     """
     Process a purchase to unlock a chapter:
-    1. Verifies user has enough points
+    1. Verifies user has enough points (using cached data if available)
     2. Deducts points from user account
     3. Updates reading history
     4. Returns redirect URL
     """
     try:
-        # 1. Get current user data
-        user_response = requests.get(f"{USER_SERVICE_URL}/{user_id}")
+        # Get user data from request body if available (client-side cached data)
+        request_data = request.get_json() or {}
+        cached_user_data = request_data.get('user_data')
         
-        if not user_response.ok:
-            return jsonify({
-                "error": "Failed to fetch user data",
-                "status": user_response.status_code,
-                "message": user_response.text
-            }), 500
+        
+        # Only fetch user data if not provided in the request
+        if cached_user_data:
+            user_data = cached_user_data
+            user_points = user_data.get("points", 0)
+            print(f"Using cached user data for purchase. User ID: {user_id}, Points: {user_points}")
+        else:
+            # Fallback: Get current user data from user service
+            print(f"No cached user data provided, fetching from user service for ID: {user_id}")
+            user_response = requests.get(f"{USER_SERVICE_URL}/{user_id}")
             
-        user_data = user_response.json()
-        user_points = user_data.get("points", 0)
+            if not user_response.ok:
+                return jsonify({
+                    "error": "Failed to fetch user data",
+                    "status": user_response.status_code,
+                    "message": user_response.text
+                }), 500
+                
+            user_data = user_response.json()
+            user_points = user_data.get("points", 0)
         
-        # 2. Check if user has enough points
+        # Check if user has enough points
         if user_points < UNLOCK_COST:
             return jsonify({
                 "status": "insufficient_funds",
@@ -83,7 +94,7 @@ def purchase_chapter_access(chapter_id, user_id):
                 "subscription_url": "subscription.html"  # URL to subscription page
             }), 402  # 402 Payment Required
         
-        # 2.5 Get chapter details for the redirect URL
+        # Get chapter details for the redirect URL
         chapter_response = requests.get(f"http://localhost:5005/api/chapters/{chapter_id}")
         if not chapter_response.ok:
             return jsonify({
@@ -97,7 +108,7 @@ def purchase_chapter_access(chapter_id, user_id):
         chapter_number = chapter_data.get("chapter_number", "1")
         chapter_title = chapter_data.get("title", "")
         
-        # 3. Deduct points from user account
+        # Deduct points from user account
         update_response = requests.put(
             f"{USER_SERVICE_URL}/{user_id}/points",
             json={"deduct": UNLOCK_COST}
@@ -114,9 +125,9 @@ def purchase_chapter_access(chapter_id, user_id):
         update_data = update_response.json()
         points_remaining = update_data.get("points", 0)
         
-        # 4. Add chapter to reading history to mark it as accessible
+        # Add chapter to reading history to mark it as accessible
         history_response = requests.post(
-            f"{HISTORY_SERVICE_URL}/add",
+            f"{HISTORY_SERVICE_URL}",
             json={"user_id": user_id, "chapter_id": chapter_id}
         )
         
@@ -124,12 +135,15 @@ def purchase_chapter_access(chapter_id, user_id):
             # Log warning but continue (consider a compensation transaction here in a real system)
             print(f"Warning: Failed to update history after purchase. User {user_id}, Chapter {chapter_id}")
         
-        # 5. Return success with redirect URL - add purchased=true parameter
+        # Return success with redirect URL - add purchased=true parameter
         return jsonify({
             "status": "success",
             "message": f"Successfully purchased chapter access for {UNLOCK_COST} points",
-            "redirect_url": f"{CHAPTER_READER_URL}?chapter_id={chapter_id}&chapter_number={chapter_number}&title={urllib.parse.quote(chapter_title)}&comic_id={comic_id}&purchased=true",
-            "points_remaining": points_remaining
+            "redirect_url": f"{CHAPTER_READER_URL}?chapter_id={chapter_id}&chapter_number={chapter_number}&title={urllib.parse.quote(chapter_title)}&comic_id={comic_id}&refresh=true",
+            "points_remaining": points_remaining,
+            "chapter_number": chapter_number,
+            "title": chapter_title,
+            "comic_id": comic_id
         })
             
     except requests.exceptions.RequestException as e:
