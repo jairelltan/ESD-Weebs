@@ -16,6 +16,6 @@ CREATE TABLE premium_plan (
 
 -- Insert sample data into the premium_plan table
 INSERT INTO premium_plan (plan_name, description, price, duration, features) VALUES
-('Monthly Premium', 'Access all premium features for one month', 9.99, 'MONTHLY', 'Unlimited chapter access, 15% discount on merchandise'),
-('Quarterly Premium', 'Access all premium features for three months', 24.99, 'QUARTERLY', 'Unlimited chapter access, 15% discount on merchandise'),
-('Yearly Premium', 'Access all premium features for one year', 89.99, 'YEARLY', 'Unlimited chapter access, 15% discount on merchandise'); 
+('Monthly Premium', 'Access all premium features for one month', 9.99, 'MONTHLY', 'Unlimited chapter access'),
+('Quarterly Premium', 'Access all premium features for three months', 24.99, 'QUARTERLY', 'Unlimited chapter access'),
+('Yearly Premium', 'Access all premium features for one year', 89.99, 'YEARLY', 'Unlimited chapter access'); 
