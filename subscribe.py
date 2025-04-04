@@ -16,10 +16,9 @@ PAYMENT_URL = "http://localhost:5017"
 NOTIFICATION_URL = "http://localhost:5007"
 RECEIPT_URL = "http://localhost:5006"
 
-# Service URLs
+# Service URLs for environment configuration
 user_URL = os.environ.get('user_URL') or "http://localhost:5000/user"
 premium_URL = os.environ.get('premium_URL') or "http://localhost:5004/premium"
-payment_composite_URL = os.environ.get('payment_composite_URL') or "http://localhost:5019/process_payment"
 
 stripe.api_key = 'pk_test_51R6nIRFRwiBVrzVlYE7jVVxhXRxI8S9Vv9OagRWQqhitOwgBF1hoiOKkJr3PDZUvqaxI16rQrdMPx018CMKK9hR00dakf2erY'  
 
