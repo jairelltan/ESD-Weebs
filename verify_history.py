@@ -10,18 +10,17 @@ CORS(app)
 # Define service URLs
 CHAPTER_SERVICE_URL = "http://localhost:5005/api/comics"
 HISTORY_SERVICE_URL = "http://localhost:5014/api/history/user"
-USER_SERVICE_URL = "http://localhost:5000/user"
 
 # Simple in-memory cache
 cache = {}
 CACHE_DURATION = 300  # 5 minutes in seconds
 
-def get_cached_data(key, fetch_func, *args):
+def get_cached_data(key, fetch_func, *args, refresh=False):
     """Get data from cache or fetch it"""
     now = time.time()
     
-    # Check if data is in cache and not expired
-    if key in cache and cache[key]['expiry'] > now:
+    # Check if data is in cache and not expired, and no refresh is requested
+    if not refresh and key in cache and cache[key]['expiry'] > now:
         return cache[key]['data']
     
     # Fetch new data
@@ -35,13 +34,6 @@ def get_cached_data(key, fetch_func, *args):
     
     return data
 
-def fetch_user(user_id):
-    """Fetch user data"""
-    response = requests.get(f"{USER_SERVICE_URL}/{user_id}")
-    if response.status_code == 200:
-        return response.json()
-    return None
-
 def fetch_chapters(comic_id):
     """Fetch chapters for a comic"""
     response = requests.get(f"{CHAPTER_SERVICE_URL}/{comic_id}/chapters")
@@ -50,66 +42,11 @@ def fetch_chapters(comic_id):
     return []
 
 def fetch_history(user_id):
-    """Fetch user reading history"""
+    """Fetch user reading history directly (not cached)"""
     response = requests.get(f"{HISTORY_SERVICE_URL}/{user_id}")
     if response.status_code == 200:
         return response.json().get("history", [])
     return []
-
-
-@app.route('/verify/comic/<int:comic_id>/user/<int:user_id>', methods=['GET'])
-def read_comic(comic_id, user_id):
-    """
-    Composite service to fetch comic chapters and determine their locked status.
-    """
-    try:
-        # Fetch all chapters for the comic
-        chapters_response = requests.get(f"http://localhost:5005/api/comics/{comic_id}/chapters")
-        if not chapters_response.ok:
-            return jsonify({
-                "error": "Failed to fetch comic chapters",
-                "status": chapters_response.status_code,
-                "message": chapters_response.text
-            }), 500
-        
-        chapters_data = chapters_response.json()
-        
-        # Fetch user's reading history
-        history_response = requests.get(f"http://localhost:5014/api/history/user/{user_id}")
-        if not history_response.ok:
-            return jsonify({
-                "error": "Failed to fetch user reading history",
-                "status": history_response.status_code,
-                "message": history_response.text
-            }), 500
-        
-        history_data = history_response.json()
-        
-        # Create a set of read chapter IDs
-        read_chapter_ids = set()
-        if history_data.get("history"):
-            for entry in history_data["history"]:
-                if "chapter_id" in entry:
-                    read_chapter_ids.add(entry["chapter_id"])
-
-        # Process chapters to determine locked status
-        processed_chapters = [
-            {
-                **chapter,
-                "is_locked": chapter["chapter_id"] not in read_chapter_ids
-            }
-            for chapter in chapters_data["chapters"]
-        ]
-
-        # Sort chapters in descending order
-        processed_chapters.sort(key=lambda c: float(c["chapter_number"]), reverse=True)
-
-        return jsonify({"chapters": processed_chapters})
-    
-    except requests.exceptions.RequestException as e:
-        return jsonify({"error": f"Service communication error: {str(e)}"}), 500
-    except Exception as e:
-        return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
 
 @app.route('/verify/comic/<int:comic_id>/user/<int:user_id>', methods=['GET'])
 def verify_chapter_access(comic_id, user_id):
@@ -122,45 +59,39 @@ def verify_chapter_access(comic_id, user_id):
     try:
         start_time = time.time()
         
-        # 1. Verify the user exists
-        user = get_cached_data(f"user_{user_id}", fetch_user, user_id)
-        if not user:
-            return jsonify({"error": "User not found"}), 404
+        # Check if refresh is requested
+        refresh_history = request.args.get('refresh', 'false').lower() == 'true'
         
-        # 2. Fetch all chapters for the comic
+        # 1. Fetch all chapters for the comic
         chapters = get_cached_data(f"chapters_{comic_id}", fetch_chapters, comic_id)
         if not chapters:
             return jsonify({"message": "No chapters found for this comic", "chapters": []})
         
-        # 3. Get user's reading history
-        user_history = get_cached_data(f"history_{user_id}", fetch_history, user_id)
+        # 2. Get user's reading history - with optional refresh
+        user_history = get_cached_data(f"history_{user_id}", fetch_history, user_id, refresh=refresh_history)
         
-        # Extract chapter IDs from history
-        read_chapter_ids = set()
-        for entry in user_history:
-            if "chapter_id" in entry:
-                read_chapter_ids.add(entry["chapter_id"])
+        # 3. Extract chapter IDs from history (use a set for O(1) lookups)
+        read_chapter_ids = {entry["chapter_id"] for entry in user_history if "chapter_id" in entry}
         
-        # Process chapters to add locked status
-        processed_chapters = []
-        for chapter in chapters:
-            chapter_id = chapter.get("chapter_id")
-            
-            # A chapter is unlocked if it's in the reading history
-            is_unlocked = chapter_id in read_chapter_ids
-            
-            chapter_data = {
-                "chapter_id": chapter_id,
+        # 4. Process chapters to add locked status (using list comprehension for better performance)
+        processed_chapters = [
+            {
+                "chapter_id": chapter.get("chapter_id"),
                 "chapter_number": chapter.get("chapter_number"),
                 "title": chapter.get("title"),
                 "release_date": chapter.get("release_date"),
-                "is_locked": not is_unlocked
+                "is_locked": chapter.get("chapter_id") not in read_chapter_ids
             }
-            processed_chapters.append(chapter_data)
+            for chapter in chapters
+        ]
         
-        # Record performance metric
+        # 5. Sort chapters by chapter number in descending order
+        processed_chapters.sort(key=lambda c: float(c["chapter_number"]), reverse=True)
+        
+        # Record performance metric only for slow operations
         elapsed_time = time.time() - start_time
-        print(f"Processed {len(processed_chapters)} chapters in {elapsed_time:.3f}s")
+        if elapsed_time > 0.5:  # Only log slow operations (>500ms)
+            print(f"SLOW: Processed {len(processed_chapters)} chapters in {elapsed_time:.3f}s")
         
         return jsonify({
             "comic_id": comic_id,
@@ -183,26 +114,22 @@ def verify_single_chapter_access(chapter_id, user_id):
     try:
         start_time = time.time()
         
-        # 1. Verify the user exists
-        user = get_cached_data(f"user_{user_id}", fetch_user, user_id)
-        if not user:
-            return jsonify({"error": "User not found", "is_accessible": False}), 404
+        # Check if refresh is requested
+        refresh_history = request.args.get('refresh', 'false').lower() == 'true'
         
-        # 2. Get user's reading history
-        user_history = get_cached_data(f"history_{user_id}", fetch_history, user_id)
+        # 1. Get user's reading history - with optional refresh
+        user_history = get_cached_data(f"history_{user_id}", fetch_history, user_id, refresh=refresh_history)
         
-        # Extract chapter IDs from history
-        read_chapter_ids = set()
-        for entry in user_history:
-            if "chapter_id" in entry:
-                read_chapter_ids.add(entry["chapter_id"])
+        # 2. Extract chapter IDs from history (use a set for O(1) lookups)
+        read_chapter_ids = {entry["chapter_id"] for entry in user_history if "chapter_id" in entry}
         
-        # Check if this specific chapter has been read
+        # 3. Check if this specific chapter has been read
         is_accessible = chapter_id in read_chapter_ids
         
-        # Record performance metric
+        # Record performance metric only for slow operations
         elapsed_time = time.time() - start_time
-        print(f"Verification completed in {elapsed_time:.3f}s - Chapter {chapter_id} is {'accessible' if is_accessible else 'not accessible'}")
+        if elapsed_time > 0.2:  # Only log slow operations (>200ms)
+            print(f"SLOW: Verification completed in {elapsed_time:.3f}s - Chapter {chapter_id}")
         
         return jsonify({
             "chapter_id": chapter_id,
@@ -222,7 +149,8 @@ def health_check():
         "status": "up",
         "service": "verify_history",
         "timestamp": datetime.now().isoformat(),
-        "cache_size": len(cache)
+        "cache_size": len(cache),
+        "cache_keys": list(cache.keys())
     })
 
 @app.route('/cache/clear', methods=['POST'])
