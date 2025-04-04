@@ -23,14 +23,14 @@ def payment_successful():
         if not user_id or not amount:
             return jsonify({"error": "Missing required fields: user_id or amount"}), 400
 
-        # Step 1: Call concept.py to process payment
+        # Step 1: Call processpayment.py to process payment
         concept_response = requests.post(concept_service_url, json={
             "amount": amount,
             "user_id": user_id,
             "category": category
         })
 
-        # Check if concept.py responded successfully
+        # Check if processpayment.py responded successfully
         if concept_response.status_code != 200:
             return jsonify({"error": "Failed to process payment in concept service"}), 500
 
@@ -41,7 +41,7 @@ def payment_successful():
         client_secret = concept_data.get("clientSecret")
 
 
-        # Step 2: If concept.py is successful, delete cart entries for the user
+        # Step 2: If processpayment.py is successful, delete cart entries for the user
         cart_response = requests.delete(f'{cart_service_url}/{user_id}')
         
         if cart_response.status_code != 200:

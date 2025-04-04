@@ -202,19 +202,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- Stock Update Form (For Demo Purposes)-->
-        <div class="container mt-5">
-            <h2 v-if="selectedProduct">Update Stock for {{ selectedProduct.comic_name }} - Volume {{
-                selectedProduct.volume_name }}</h2>
-            <form @submit.prevent="updateStock">
-                <div class="mb-3">
-                    <label for="stock" class="form-label">New Stock Quantity</label>
-                    <input type="number" id="stock" class="form-control" v-model="newStock" min="0" required>
-                </div>
-                <button type="submit" class="btn btn-success" :disabled="selectedProduct === null">Update Stock</button>
-            </form>
-        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -502,34 +489,7 @@
                         .catch(error => {
                             console.error('Error fetching cart items:', error);
                         });
-                },
-
-                // Update stock using the API (FOR DEMO)
-                updateStock() {
-                    const updatedProduct = {
-                        ...this.selectedProduct,
-                        quantity_in_stock: this.newStock,
-                    };
-
-                    fetch('https://personal-dwnxuxog.outsystemscloud.com/InventoryAtomicMicroservice/rest/RESTAPI/UpdateStock', {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(updatedProduct),
-                    })
-                        .then(response => response.json())
-                        .then(data => {
-                            alert('Stock updated successfully!');
-                            this.selectedProduct.quantity_in_stock = this.newStock;
-                            this.selectedProduct = null;
-                            this.newStock = 0;
-                        })
-                        .catch(error => {
-                            console.error('Error updating stock:', error);
-                            alert('Error updating stock. Please try again.');
-                        });
-                },                
+                },     
             }
         })
 
