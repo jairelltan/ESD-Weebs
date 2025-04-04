@@ -587,6 +587,21 @@
             if (popup) popup.style.display = 'none';
             if (overlay) overlay.style.display = 'none';
 
+            // Clear all chapter cache
+            const keys = Object.keys(localStorage);
+            for (const key of keys) {
+                if (key.startsWith('comic_chapters_')) {
+                    localStorage.removeItem(key);
+                    
+                    // Also remove the timestamp
+                    const timestampKey = `${key}_timestamp`;
+                    if (keys.includes(timestampKey)) {
+                        localStorage.removeItem(timestampKey);
+                    }
+                }
+            }
+            console.log('Cleared chapter cache after subscription purchase');
+
             // Refresh the page to update points display
             window.location.reload();
         }
@@ -798,9 +813,28 @@
                         }
                         
                         const userId = cachedUserId ? parseInt(cachedUserId) : currentUser.value.id;
-                        console.log(`Using user ID: ${userId} for comic ${comic.comic_id}`);
-
-                        // Call the composite microservice - use cached data by default (no refresh parameter)
+                        
+                        // Check for cached chapter data for this comic
+                        const cacheKey = `comic_chapters_${comic.comic_id}_${userId}`;
+                        const cachedChapters = localStorage.getItem(cacheKey);
+                        const cacheTimestamp = localStorage.getItem(`${cacheKey}_timestamp`);
+                        
+                        // Use cached data if it exists and is less than 30 minutes old
+                        const now = Date.now();
+                        const cacheAge = cacheTimestamp ? now - parseInt(cacheTimestamp) : Infinity;
+                        const cacheValid = cachedChapters && cacheAge < 1800000; // 30 minutes
+                        
+                        // Check if we need to use cache
+                        if (cacheValid) {
+                            console.log(`Using cached chapter data for comic ${comic.comic_id}, age: ${Math.round(cacheAge/1000)} seconds`);
+                            chapters.value = JSON.parse(cachedChapters);
+                            loadingChapters.value = false;
+                            return;
+                        }
+                        
+                        console.log(`Fetching fresh chapter data for comic ${comic.comic_id}`);
+                        
+                        // Call the composite microservice - use cached history by default (no refresh parameter)
                         const response = await fetch(`http://localhost:5020/api/read_comic/${comic.comic_id}/user/${userId}`);
 
                         if (!response.ok) {
@@ -808,10 +842,14 @@
                         }
 
                         const data = await response.json();
-                        console.log('Processed chapters data:', data);
-
+                        
                         // Update chapters list
                         chapters.value = data.chapters;
+                        
+                        // Cache the chapters data with timestamp
+                        localStorage.setItem(cacheKey, JSON.stringify(data.chapters));
+                        localStorage.setItem(`${cacheKey}_timestamp`, now.toString());
+                        console.log(`Cached chapters data for comic ${comic.comic_id}`);
 
                     } catch (error) {
                         console.error('Error fetching chapters:', error);
@@ -866,9 +904,18 @@
                     localStorage.setItem('cached_chapter_number', chapterNumber.toString());
                     localStorage.setItem('cached_chapter_title', title);
                     
-                    // Construct the URL for the chapter reader without refresh parameter
-                    // This will use cached history for better performance
-                    const readerUrl = `chapter-reader.html?chapter_id=${chapterId}&chapter_number=${chapterNumber}&title=${encodeURIComponent(title)}&comic_id=${comicId}`;
+                    // Get if this chapter was just purchased
+                    const justPurchased = localStorage.getItem(`chapter_${chapterId}_just_purchased`) === 'true';
+                    
+                    // Construct the URL for the chapter reader - only include refresh=true if just purchased
+                    const refreshParam = justPurchased ? '&refresh=true' : '';
+                    const readerUrl = `chapter-reader.html?chapter_id=${chapterId}&chapter_number=${chapterNumber}&title=${encodeURIComponent(title)}&comic_id=${comicId}${refreshParam}`;
+                    
+                    // Clear the just-purchased flag if it exists
+                    if (justPurchased) {
+                        localStorage.removeItem(`chapter_${chapterId}_just_purchased`);
+                        console.log(`Cleared just-purchased flag for chapter ${chapterId}`);
+                    }
 
                     // Navigate to the chapter reader
                     window.location.href = readerUrl;
@@ -1036,6 +1083,13 @@
 
                                 // Also update the chapters list to reflect the purchase
                                 if (selectedComic.value) {
+                                    // Clear the cache for this comic to ensure fresh data on next view
+                                    const cacheKey = `comic_chapters_${selectedComic.value.comic_id}_${userId}`;
+                                    localStorage.removeItem(cacheKey);
+                                    localStorage.removeItem(`${cacheKey}_timestamp`);
+                                    console.log(`Cleared cache for comic ${selectedComic.value.comic_id} after purchase`);
+                                    
+                                    // Update the current in-memory chapters list for immediate UI update
                                     for (const chapter of chapters.value) {
                                         if (chapter.chapter_id === chapterId) {
                                             console.log(`Unlocking chapter ${chapterId} in UI`);
@@ -1063,13 +1117,17 @@
                     // Use the redirect URL from the response if available, otherwise construct it
                     let redirectUrl = data.redirect_url;
                     if (!redirectUrl && data.chapter_number && data.comic_id) {
-                        redirectUrl = `chapter-reader.html?chapter_id=${chapterId}&chapter_number=${data.chapter_number}&title=${encodeURIComponent(data.title || '')}&comic_id=${data.comic_id}&purchased=true`;
+                        redirectUrl = `chapter-reader.html?chapter_id=${chapterId}&chapter_number=${data.chapter_number}&title=${encodeURIComponent(data.title || '')}&comic_id=${data.comic_id}&refresh=true`;
                     }
 
                     // Update user points in the UI before redirecting
                     if (currentUser.value) {
                         currentUser.value.points = data.points_remaining;
                     }
+                    
+                    // Set a flag that this chapter was just purchased - will be used by openChapterPage
+                    localStorage.setItem(`chapter_${chapterId}_just_purchased`, 'true');
+                    console.log(`Set purchase flag for chapter ${chapterId}`);
 
                     // Redirect immediately
                     window.location.href = redirectUrl;
@@ -1143,6 +1201,12 @@
                         const cachedUserId = localStorage.getItem('cached_user_id');
                         const userId = cachedUserId ? parseInt(cachedUserId) : (currentUser.value ? currentUser.value.id : 1);
                         
+                        // Clear the cached data for this comic
+                        const cacheKey = `comic_chapters_${selectedComic.value.comic_id}_${userId}`;
+                        localStorage.removeItem(cacheKey);
+                        localStorage.removeItem(`${cacheKey}_timestamp`);
+                        console.log(`Cache cleared for comic ${selectedComic.value.comic_id}`);
+                        
                         // Call the API with refresh=true to force fresh history data
                         const response = await fetch(`http://localhost:5020/api/read_comic/${selectedComic.value.comic_id}/user/${userId}?refresh=true`);
                         
@@ -1155,6 +1219,12 @@
 
                         // Update chapters list
                         chapters.value = data.chapters;
+                        
+                        // Update cache with fresh data
+                        const now = Date.now();
+                        localStorage.setItem(cacheKey, JSON.stringify(data.chapters));
+                        localStorage.setItem(`${cacheKey}_timestamp`, now.toString());
+                        console.log(`Updated cache for comic ${selectedComic.value.comic_id}`);
                     } catch (error) {
                         console.error('Error refreshing chapters:', error);
                         showErrorDialog('Failed to refresh chapter status. Please try again.');
@@ -1175,22 +1245,46 @@
                     fetchUserData();
                     comicModal = new bootstrap.Modal(document.getElementById('comicModal'));
                     
+                    // Check for any recently purchased chapters
+                    checkRecentPurchases();
+                    
                     // Add reload listener
                     window.addEventListener('load', () => {
                         console.log('Window load event - refreshing user data');
                         fetchUserData();
+                        checkRecentPurchases();
                     });
-                    
-                    // Force an update after a short delay
-                    setTimeout(() => {
-                        console.log('Forcing update check after mount');
-                        if (currentUser.value) {
-                            console.log('User data available on mount:', currentUser.value.points, 'points');
-                        } else {
-                            console.log('User data not yet available on mount');
-                        }
-                    }, 500);
                 });
+                
+                // Check localStorage for recently purchased chapter flags
+                function checkRecentPurchases() {
+                    const keys = Object.keys(localStorage);
+                    const purchaseFlags = keys.filter(key => key.startsWith('chapter_') && key.endsWith('_just_purchased'));
+                    
+                    if (purchaseFlags.length > 0) {
+                        console.log('Found purchase flags:', purchaseFlags);
+                        
+                        // Clear all chapter cache to ensure fresh data
+                        for (const key of keys) {
+                            if (key.startsWith('comic_chapters_')) {
+                                localStorage.removeItem(key);
+                                
+                                // Also remove the timestamp
+                                const timestampKey = `${key}_timestamp`;
+                                if (keys.includes(timestampKey)) {
+                                    localStorage.removeItem(timestampKey);
+                                }
+                            }
+                        }
+                        
+                        console.log('Cleared all chapter cache due to recent purchases');
+                        
+                        // Clear purchase flags as we've handled them
+                        for (const flag of purchaseFlags) {
+                            localStorage.removeItem(flag);
+                        }
+                    }
+                }
 
                 return {
                     comics,
