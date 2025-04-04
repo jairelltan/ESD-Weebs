@@ -2,10 +2,14 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import mysql.connector
 from datetime import datetime
-import requests
+import logging
 
 app = Flask(__name__)
 CORS(app)
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Database configuration
 db_config = {
@@ -15,59 +19,40 @@ db_config = {
     'database': 'comments_db'
 }
 
-# Thread service URL
-THREAD_SERVICE_URL = "http://localhost:5011"
-
 def get_db_connection():
-    return mysql.connector.connect(**db_config)
-
-def update_thread_comment_count(thread_id):
-    """Update the comment count in the thread service"""
     try:
-        # First get the current count of comments for this thread
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(*) FROM comments WHERE thread_id = %s", (thread_id,))
-        count = cursor.fetchone()[0]
-        cursor.close()
-        conn.close()
-
-        # Update the count in the thread service
-        response = requests.put(
-            f"{THREAD_SERVICE_URL}/thread/{thread_id}/comments/count",
-            json={"count": count}
-        )
-        
-        if not response.ok:
-            print(f"Failed to update thread comment count: {response.text}")
-            
-    except Exception as e:
-        print(f"Error updating thread comment count: {str(e)}")
+        conn = mysql.connector.connect(**db_config)
+        return conn
+    except mysql.connector.Error as err:
+        logger.error(f"Database connection error: {err}")
+        return None
 
 # Get comments for a thread
 @app.route('/comments/thread/<int:thread_id>', methods=['GET'])
 def get_thread_comments(thread_id):
     try:
+        logger.info(f"Fetching comments for thread {thread_id}")
         conn = get_db_connection()
+        if conn is None:
+            return jsonify({"error": "Database connection failed"}), 500
+            
         cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT * FROM comments 
+            WHERE thread_id = %s 
+            ORDER BY created_at DESC
+        """, (thread_id,))
         
-        # Get all comments for the thread, ordered by created_at in ascending order (oldest first)
-        query = """
-            SELECT c.*, 
-                   (SELECT COUNT(*) FROM comments WHERE parent_id = c.comment_id) as reply_count
-            FROM comments c
-            WHERE c.thread_id = %s AND c.parent_id IS NULL
-            ORDER BY c.created_at ASC
-        """
-        cursor.execute(query, (thread_id,))
         comments = cursor.fetchall()
+        logger.info(f"Found {len(comments)} comments for thread {thread_id}")
+        
+        cursor.close()
+        conn.close()
         
         return jsonify(comments)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
-    finally:
-        cursor.close()
-        conn.close()
+        logger.error(f"Error fetching comments: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 # Get replies for a comment
 @app.route('/comments/<int:comment_id>/replies', methods=['GET'])
@@ -96,55 +81,75 @@ def get_comment_replies(comment_id):
 def create_comment():
     try:
         data = request.json
+        logger.info(f"Creating comment with data: {data}")
+        
+        # Validate required fields
+        required_fields = ['thread_id', 'user_id', 'content']
+        for field in required_fields:
+            if field not in data:
+                logger.error(f"Missing required field: {field}")
+                return jsonify({"error": f"Missing required field: {field}"}), 400
+        
         conn = get_db_connection()
+        if conn is None:
+            return jsonify({"error": "Database connection failed"}), 500
+            
         cursor = conn.cursor()
         
-        query = """
-            INSERT INTO comments (thread_id, user_id, parent_id, content)
+        # Insert the comment
+        cursor.execute("""
+            INSERT INTO comments (thread_id, user_id, content, created_at)
             VALUES (%s, %s, %s, %s)
-        """
-        values = (
-            data.get('thread_id'),
-            data.get('user_id'),
-            data.get('parent_id'),
-            data.get('content')
-        )
+        """, (
+            data['thread_id'],
+            data['user_id'],
+            data['content'],
+            datetime.now()
+        ))
         
-        cursor.execute(query, values)
         conn.commit()
+        comment_id = cursor.lastrowid
+        logger.info(f"Created comment with ID: {comment_id}")
         
-        # Update the thread's comment count
-        thread_id = data.get('thread_id')
-        if thread_id:
-            update_thread_comment_count(thread_id)
-        
-        return jsonify({
-            'message': 'Comment created successfully',
-            'comment_id': cursor.lastrowid
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-    finally:
         cursor.close()
         conn.close()
+        
+        return jsonify({
+            "message": "Comment created successfully",
+            "comment_id": comment_id
+        }), 201
+        
+    except Exception as e:
+        logger.error(f"Error creating comment: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 # Like a comment
 @app.route('/comment/<int:comment_id>/like', methods=['POST'])
 def like_comment(comment_id):
     try:
+        logger.info(f"Liking comment {comment_id}")
         conn = get_db_connection()
+        if conn is None:
+            return jsonify({"error": "Database connection failed"}), 500
+            
         cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE comments 
+            SET likes = likes + 1 
+            WHERE comment_id = %s
+        """, (comment_id,))
         
-        query = "UPDATE comments SET likes = likes + 1 WHERE comment_id = %s"
-        cursor.execute(query, (comment_id,))
         conn.commit()
+        logger.info(f"Successfully liked comment {comment_id}")
         
-        return jsonify({'message': 'Comment liked successfully'})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-    finally:
         cursor.close()
         conn.close()
+        
+        return jsonify({"message": "Comment liked successfully"})
+        
+    except Exception as e:
+        logger.error(f"Error liking comment: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(port=5012, debug=True) 

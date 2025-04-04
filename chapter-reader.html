@@ -1886,13 +1886,12 @@
             const content = form.querySelector('textarea').value;
             
             try {
-                const response = await fetch('http://localhost:5012/comment', {
+                const response = await fetch(`http://localhost:5025/api/thread/${threadId}/comment`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        thread_id: threadId,
                         user_id: 1, // TODO: Replace with actual user ID
                         content: content
                     })

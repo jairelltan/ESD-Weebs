@@ -3,7 +3,6 @@ import mysql.connector
 from datetime import datetime
 from enum import Enum
 from flask_cors import CORS
-import requests
 
 app = Flask(__name__)
 
@@ -14,9 +13,6 @@ db_config = {
     'password': '',
     'database': 'thread_db'  # Separate database for threads
 }
-
-# Comment service URL
-COMMENT_SERVICE_URL = "http://localhost:5012"
 
 CORS(app)
 
@@ -40,32 +36,6 @@ def get_db_connection():
         print(f"Database connection error: {err}")
         return None
 
-def update_comment_count(thread_id):
-    """Update the comment count for a thread by querying the comment service"""
-    try:
-        # Get the current count from the comment service
-        response = requests.get(f"{COMMENT_SERVICE_URL}/comments/thread/{thread_id}")
-        if response.ok:
-            comments = response.json()
-            count = len(comments)
-            
-            # Update the count in the thread database
-            conn = get_db_connection()
-            if conn:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    UPDATE threads 
-                    SET comment_count = %s 
-                    WHERE thread_id = %s
-                """, (count, thread_id))
-                conn.commit()
-                cursor.close()
-                conn.close()
-                return count
-    except Exception as e:
-        print(f"Error updating comment count: {str(e)}")
-    return 0
-
 # Route for home page
 @app.route('/')
 def home():
@@ -81,10 +51,6 @@ def get_all_threads():
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT * FROM threads ORDER BY create_date DESC")
     threads = cursor.fetchall()
-    
-    # Update comment counts for all threads
-    for thread in threads:
-        thread['comment_count'] = update_comment_count(thread['thread_id'])
     
     cursor.close()
     conn.close()
@@ -102,10 +68,6 @@ def get_threads_by_chapter(chapter_id):
     cursor.execute("SELECT * FROM threads WHERE chapter_id = %s ORDER BY create_date DESC", (chapter_id,))
     threads = cursor.fetchall()
     
-    # Update comment counts for all threads
-    for thread in threads:
-        thread['comment_count'] = update_comment_count(thread['thread_id'])
-    
     cursor.close()
     conn.close()
     
@@ -114,8 +76,23 @@ def get_threads_by_chapter(chapter_id):
 # Get comment count for a thread
 @app.route('/thread/<int:thread_id>/comments/count', methods=['GET'])
 def get_thread_comment_count(thread_id):
-    # Update the count first
-    count = update_comment_count(thread_id)
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT comment_count 
+        FROM threads 
+        WHERE thread_id = %s
+    """, (thread_id,))
+    
+    result = cursor.fetchone()
+    count = result['comment_count'] if result else 0
+    
+    cursor.close()
+    conn.close()
+    
     return jsonify({"count": count})
 
 # Update thread comment count
