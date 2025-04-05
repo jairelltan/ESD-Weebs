@@ -39,9 +39,17 @@ This project has been dockerized for easy deployment. The setup includes:
    docker-compose up -d
    ```
 
-3. Access the services:
+3. To reset the database:
+   ```
+   docker-compose down -v
+   docker-compose up -d
+   ```
+
+4. Access the services:
    - User API: http://localhost:5000
-   - Various other services run on ports 5001-5025
+   - Comic API: http://localhost:5001
+   - Various other services run on ports 5002-5025
+
 
 ### Database Initialization
 
@@ -80,6 +88,13 @@ db_config = {
 
 - **Services not starting:** Check the logs with `docker-compose logs`
 - **Database connection issues:** Ensure the database is initialized properly by checking `docker-compose logs db`
+- **Port conflicts:** If you see connection refused errors, another service might be using the same port. Check running services with `netstat -ano | findstr :<port-number>`
+- **CORS issues:** If browser console shows CORS errors, verify the proper CORS headers are set in the Flask services
+- **Missing Python packages:** Some services may require additional packages like 'stripe'. You can install them manually:
+  ```
+  docker exec -it esd-weebs-app pip install <package-name>
+  ```
+- **WSL conflicts:** If you're using WSL, be aware it might use the same ports. Consider using 127.0.0.1 instead of localhost for direct connections
 
 ## Adding New Comics
 
@@ -233,3 +248,45 @@ Endpoints:
 - GET `/threads` - Get all threads
 - POST `/threads` - Create thread
 - GET `/threads/{thread_id}`
+
+## Composite Services
+
+### 1. Add to Cart Service (Port: 5009)
+**Type**: Composite
+**Description**: Coordinates adding items to cart
+
+### 2. Update Waitlist Service (Port: 5010)
+**Type**: Composite
+**Description**: Updates waitlist entries
+
+### 3. Subscribe Service (Port: 5018)
+**Type**: Composite
+**Description**: Manages premium subscriptions with Stripe integration
+**Required packages**: stripe
+
+### 4. Process Payment Service (Port: 5021)
+**Type**: Composite
+**Description**: Processes payments through Stripe API
+**Note**: Was previously on port 5099
+
+### 5. Book Payment Service (Port: 5022)
+**Type**: Composite
+**Description**: Handles book purchase payments 
+**Note**: Was previously on port 5100
+
+## Access Front-end
+
+The web interface can be accessed through:
+- http://127.0.0.1:5001/comic - Comic listings
+- http://127.0.0.1:5022/payment - Payment processing
+
+## Dependency Installation
+
+The following Python packages are required:
+- Flask==2.0.1
+- flask-cors==3.0.10
+- mysql-connector-python==8.0.28
+- requests==2.28.1
+- Werkzeug==2.0.3
+- python-dotenv==0.20.0
+- stripe==12.0.0 (for payment processing)
