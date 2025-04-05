@@ -1,3 +1,117 @@
+# ESD-Weebs Comic Reading Platform
+
+A microservice-based web application for reading comics, with features including user management, comic browsing, chapter management, and more.
+
+## Architecture
+
+This application follows a microservice architecture with multiple Flask-based Python services and a MySQL database. The services include:
+
+- User management service
+- Comic listing service
+- Chapter viewing service
+- Reading history service
+- Waitlist service
+- Comments and threads services
+- Various composite services for complex operations
+
+## Docker Setup
+
+This project has been dockerized for easy deployment. The setup includes:
+
+1. A MySQL database container for data storage
+2. An application container running all the microservices
+
+### Requirements
+
+- Docker
+- Docker Compose
+
+### Running the Application
+
+1. Clone the repository:
+   ```
+   git clone <repository-url>
+   cd ESD-Weebs
+   ```
+
+2. Build and start the containers:
+   ```
+   docker-compose up -d
+   ```
+
+3. Access the services:
+   - User API: http://localhost:5000
+   - Various other services run on ports 5001-5025
+
+### Database Initialization
+
+The database is automatically initialized on startup with sample data for:
+- Comics (One Piece, Attack on Titan, Demon Slayer, etc.)
+- Chapters
+- Users
+- Reading history
+- Premium plans
+- And more
+
+## Development
+
+### Adding New Services
+
+To add a new service:
+
+1. Create a new Python file with your Flask service
+2. Add any required database schema to the combined.txt file
+3. Rebuild the Docker images: `docker-compose up -d --build`
+
+### Connecting to the Database
+
+From your application code, use the database configuration:
+
+```python
+db_config = {
+    'host': 'db',  # Use 'db' as the hostname inside Docker containers
+    'user': 'root',
+    'password': 'root_password',
+    'database': '[your_database_name]'
+}
+```
+
+## Troubleshooting
+
+- **Services not starting:** Check the logs with `docker-compose logs`
+- **Database connection issues:** Ensure the database is initialized properly by checking `docker-compose logs db`
+
+## Adding New Comics
+
+To add new comics to the system:
+
+1. **Prepare your comic files**:
+   - Place cover images in the `./images` directory named after the comic (e.g., `comic_name.jpg`)
+   - Create comic directories in `./Chapters/<Comic Name>/<Chapter Name>`
+   - Make sure chapter names contain chapter numbers that can be parsed (e.g., "Chapter 1", "Ch.0001", etc.)
+   - Add page images to each chapter directory, named numerically (e.g., "01.jpg", "02.jpg")
+
+2. **Run the following commands** to copy your comics to the Docker container and update the database:
+   ```
+   # Copy assets to the Docker container
+   .\copy_assets_to_docker.ps1
+   
+   # Run the upload script to process the assets
+   docker exec -it esd-weebs-app python upload_chapter_pages.py
+   ```
+
+3. **Restart the container** if needed:
+   ```
+   docker-compose restart app
+   ```
+
+The upload script will automatically:
+- Process all cover images and associate them with comics in the database
+- Process all chapter pages and add them to the database
+- Skip any files that are already in the database
+
+Note: On first container startup, the system will automatically import any comics found in the mounted volumes.
+
 # ESD-Weebs Microservices Architecture
 
 ## Overview
@@ -118,174 +232,4 @@ Endpoints:
 Endpoints:
 - GET `/threads` - Get all threads
 - POST `/threads` - Create thread
-- GET `/threads/{thread_id}` - Get thread
-- PUT `/threads/{thread_id}` - Update thread
-- DELETE `/threads/{thread_id}` - Delete thread
-
-### 12. Comment Service (Port: 5016)
-**Type**: Atomic
-**Database**: `comment_db`
-**Description**: Manages thread comments
-
-Endpoints:
-- GET `/comments/{thread_id}` - Get comments
-- POST `/comments` - Create comment
-- PUT `/comments/{comment_id}` - Update comment
-- DELETE `/comments/{comment_id}` - Delete comment
-
-### 13. Stripe API Service (Port: 5017)
-**Type**: Atomic
-**Description**: Handles Stripe payment integration
-
-Endpoints:
-- POST `/create-payment-intent` - Create payment intent
-
-## Composite Services
-
-### 1. Subscribe Service (Port: 5018)
-**Type**: Composite
-**Dependencies**: User, Premium Plan, Payment, Receipt, Notification
-**Description**: Manages subscription process
-
-Endpoints:
-- POST `/subscribe` - Handle subscription
-
-### 2. Add to Waitlist Service (Port: 5002)
-**Type**: Composite
-**Dependencies**: User, Waitlist, RabbitMQ
-**Description**: Manages waitlist additions
-
-Endpoints:
-- GET `/addtowishlist/{user_id}/{product_id}` - Add to waitlist
-
-### 3. Add to Cart Service (Port: 5009)
-**Type**: Composite
-**Dependencies**: User, Cart
-**Description**: Manages cart additions
-
-Endpoints:
-- GET `/addtocart/{user_id}/{product_id}` - Add to cart
-
-### 4. Update Waitlist Service
-**Type**: Composite
-**Dependencies**: Waitlist, Notification
-**Description**: Updates waitlist status
-
-Endpoints:
-- POST `/updatewaitlist` - Update waitlist
-
-### 5. Process Payment Service
-**Type**: Composite
-**Dependencies**: Payment, Cart
-**Description**: Processes book purchases
-
-Endpoints:
-- POST `/process_payment` - Process payment
-
-### 6. Book Payment Service
-**Type**: Composite
-**Dependencies**: Payment, Cart, Receipt
-**Description**: Manages book payments
-
-Endpoints:
-- POST `/book_payment` - Process book payment
-
-### 7. Read Comic Service
-**Type**: Composite
-**Dependencies**: Comic, Chapter, Page
-**Description**: Manages comic reading
-
-Endpoints:
-- GET `/read/{comic_id}/{chapter_id}` - Get reading content
-
-### 8. View Threads Service
-**Type**: Composite
-**Dependencies**: Thread, Comment
-**Description**: Manages thread viewing
-
-Endpoints:
-- GET `/view_threads` - Get all threads
-- GET `/view_threads/{thread_id}` - Get specific thread
-
-### 9. Verify History Service
-**Type**: Composite
-**Dependencies**: History, User
-**Description**: Verifies reading history
-
-Endpoints:
-- GET `/verify_history/{user_id}` - Get verified history
-- POST `/verify_history` - Add verified entry
-
-### 10. Delete Cart Entries Service
-**Type**: Composite
-**Dependencies**: Cart
-**Description**: Manages cart deletion
-
-Endpoints:
-- DELETE `/deletecartentries/{cart_id}` - Delete entries
-
-### 11. Upload Chapter Pages Service
-**Type**: Composite
-**Dependencies**: Chapter, Page
-**Description**: Manages page uploads
-
-Endpoints:
-- POST `/upload_chapter_pages` - Upload pages
-
-## External Integration
-
-### 1. RabbitMQ Consumer
-**Type**: Message Queue Consumer
-**Description**: Processes waitlist messages
-**Dependencies**: RabbitMQ
-
-## Running the Services
-
-```bash
-# Start atomic services
-python user.py             # Port 5000
-python comic.py           # Port 5001
-python waitlist.py        # Port 5003
-python premium_plan.py     # Port 5004
-python chapter.py         # Port 5005
-python receipt.py         # Port 5006
-python notification.py     # Port 5007
-python cart.py            # Port 5008
-python page.py            # Port 5013
-python history.py         # Port 5014
-python thread.py          # Port 5015
-python comment.py         # Port 5016
-python payment/stripeapi.py # Port 5017
-
-# Start composite services
-python subscribe.py        # Port 5018
-python addtowaitlist.py   # Port 5002
-python addtocart.py       # Port 5009
-python updatewaitlist.py
-python processpayment.py
-python bookpayment.py
-python read_comic.py
-python view_threads.py
-python verify_history.py
-python deletecartentries.py
-python upload_chapter_pages.py
-
-# Start external integration
-python rabbitmq_consumer.py
-```
-
-## Architecture Notes
-
-1. Each atomic service:
-   - Has its own database
-   - Is independently deployable
-   - Handles one core business capability
-
-2. Composite services:
-   - Orchestrate multiple atomic services
-   - Don't have their own databases
-   - Handle complex business processes
-
-3. External integration:
-   - RabbitMQ for message queuing
-   - Stripe for payment processing 
+- GET `/threads/{thread_id}`

@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 import requests
 from flask_cors import CORS
 import os
@@ -7,20 +7,53 @@ import stripe
 
 
 app = Flask(__name__)
-CORS(app)
+# Configure CORS to allow requests from any origin with proper settings
+CORS(app, resources={r"/*": {
+    "origins": "*", 
+    "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
+    "expose_headers": ["Content-Type", "X-Total-Count", "Authorization"],
+    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "supports_credentials": True
+}})
 
-# URLs for the microservices
-USER_URL = "http://localhost:5000"
-PREMIUM_PLAN_URL = "http://localhost:5004"
-PAYMENT_URL = "http://localhost:5017"
-NOTIFICATION_URL = "http://localhost:5007"
-RECEIPT_URL = "http://localhost:5006"
+# URLs for the microservices (using Docker container names)
+USER_URL = "http://app:5000"
+PREMIUM_PLAN_URL = "http://app:5004"
+PAYMENT_URL = "http://app:5017"
+NOTIFICATION_URL = "http://app:5007"
+RECEIPT_URL = "http://app:5006"
 
 # Service URLs for environment configuration
-user_URL = os.environ.get('user_URL') or "http://localhost:5000/user"
-premium_URL = os.environ.get('premium_URL') or "http://localhost:5004/premium"
+user_URL = os.environ.get('user_URL') or "http://app:5000/user"
+premium_URL = os.environ.get('premium_URL') or "http://app:5004/premium"
 
-stripe.api_key = 'pk_test_51R6nIRFRwiBVrzVlYE7jVVxhXRxI8S9Vv9OagRWQqhitOwgBF1hoiOKkJr3PDZUvqaxI16rQrdMPx018CMKK9hR00dakf2erY'  
+# Add CORS headers to all responses
+@app.after_request
+def add_cors_headers(response):
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Requested-With,Accept,Origin")
+    response.headers.add("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS")
+    response.headers.add("Access-Control-Allow-Credentials", "true")
+    response.headers.add("Access-Control-Max-Age", "3600")
+    return response
+
+# Handle OPTIONS requests for CORS preflight
+@app.route('/', defaults={'path': ''}, methods=['OPTIONS'])
+@app.route('/<path:path>', methods=['OPTIONS'])
+def handle_options(path):
+    response = make_response()
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Requested-With,Accept,Origin")
+    response.headers.add("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS")
+    response.headers.add("Access-Control-Allow-Credentials", "true")
+    response.headers.add("Access-Control-Max-Age", "3600")
+    return response
+
+# Update Stripe API key (use a test key for development)
+stripe.api_key = 'sk_test_51R6nIRFRwiBVrzVlOuRFKlqJwWyYjSoFKQeVGJg5SFTedtIW2GGxrPYMm8v9tTdRlDvV2GCrN6eULFu8Mz49N2uf00HHOVyhbQ'
+
+# Only the client publishable key should go to the frontend
+stripe_publishable_key = 'pk_test_51R6nIRFRwiBVrzVlYE7jVVxhXRxI8S9Vv9OagRWQqhitOwgBF1hoiOKkJr3PDZUvqaxI16rQrdMPx018CMKK9hR00dakf2erY'
 
 @app.route('/subscribe', methods=['POST'])
 def handle_subscription():
@@ -189,6 +222,16 @@ def handle_subscription():
             "code": 500,
             "message": f"Failed to complete subscription: {str(e)}"
         }), 500
+
+@app.route('/subscribe', methods=['OPTIONS'])
+def options_subscribe():
+    response = make_response()
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Requested-With,Accept,Origin")
+    response.headers.add("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS")
+    response.headers.add("Access-Control-Allow-Credentials", "true")
+    response.headers.add("Access-Control-Max-Age", "3600")
+    return response
 
 # Error handler for invalid routes
 @app.errorhandler(404)

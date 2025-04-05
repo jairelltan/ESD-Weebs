@@ -328,13 +328,13 @@ CREATE TABLE user (
     phone_number INT NOT NULL,
     email VARCHAR(100) NOT NULL,
     address VARCHAR(255) NOT NULL,
-    points INT DEFAULT 200,
+    points INT DEFAULT 500,
     subscriber_status ENUM('MONTHLY', 'QUARTERLY', 'YEARLY', 'NIL') NOT NULL DEFAULT 'NIL'
 );
 
 -- Insert sample data into the user table
 INSERT INTO user (user_id, user_name, phone_number, email, address, points, subscriber_status) VALUES
-(1, 'John Doe', 1234567890, 'john@example.com', '123 Main St', 1000, 'NIL'),
+(1, 'John Doe', 1234567890, 'john@example.com', '123 Main St', 500, 'NIL'),
 (2, 'Jane Smith', 987654321, 'jane@example.com', '456 Oak Ave', 50, 'MONTHLY');
 
 CREATE DATABASE waitlist_db;  -- Create database (if not exists)

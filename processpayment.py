@@ -1,13 +1,41 @@
 import requests
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)
+# Configure CORS to allow requests from any origin with proper settings
+CORS(app, resources={r"/*": {
+    "origins": "*", 
+    "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
+    "expose_headers": ["Content-Type", "X-Total-Count", "Authorization"],
+    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "supports_credentials": True
+}})
+
+# Add CORS headers to all responses
+@app.after_request
+def add_cors_headers(response):
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Requested-With,Accept,Origin")
+    response.headers.add("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS")
+    response.headers.add("Access-Control-Allow-Credentials", "true")
+    return response
+
+# Handle OPTIONS requests for CORS preflight
+@app.route('/', defaults={'path': ''}, methods=['OPTIONS'])
+@app.route('/<path:path>', methods=['OPTIONS'])
+def handle_options(path):
+    response = make_response()
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Requested-With,Accept,Origin")
+    response.headers.add("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS")
+    response.headers.add("Access-Control-Allow-Credentials", "true")
+    response.headers.add("Access-Control-Max-Age", "3600")
+    return response
 
 # Microservice endpoints
-stripe_service_url = "http://127.0.0.1:5017/create-payment-intent"
-notification_service_url = "http://127.0.0.1:5007/notification/bookpayment"
+stripe_service_url = "http://app:5017/create-payment-intent"
+notification_service_url = "http://app:5007/notification/bookpayment"
 
 @app.route('/process-payment', methods=['POST'])
 def process_payment():
@@ -53,4 +81,4 @@ def process_payment():
         return jsonify({"error": f"Internal server error: {str(e)}"}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5099)
+    app.run(debug=True, port=5021)

@@ -3,27 +3,27 @@ import mysql.connector
 from mysql.connector import Error
 import re
 
-# Database configuration for chapter database
+# Database configuration for Docker environment
 chapter_db_config = {
-    'host': 'localhost',
+    'host': 'db',
     'user': 'root',
-    'password': '',
+    'password': 'root_password',
     'database': 'chapter_db'
 }
 
 # Database configuration for page database
 page_db_config = {
-    'host': 'localhost',
+    'host': 'db',
     'user': 'root',
-    'password': '',
+    'password': 'root_password',
     'database': 'page_db'
 }
 
 # Database configuration for comic database
 comic_db_config = {
-    'host': 'localhost',
+    'host': 'db',
     'user': 'root',
-    'password': '',
+    'password': 'root_password',
     'database': 'comic_db'
 }
 
@@ -66,7 +66,7 @@ def get_chapter_id(cursor, comic_id, chapter_number):
 def get_comic_id(cursor, comic_name):
     cursor.execute("""
         SELECT comic_id 
-        FROM comic_db.comic 
+        FROM comic 
         WHERE comic_name = %s
     """, (comic_name,))
     result = cursor.fetchone()
@@ -128,13 +128,14 @@ def upload_comic_cover(comic_conn, comic_id, comic_name, image_path):
         comic_conn.rollback()
         return False
 
-def upload_pages(chapter_conn, page_conn, comic_name, chapter_folder, files):
+def upload_pages(chapter_conn, page_conn, comic_conn, comic_name, chapter_folder, files):
     try:
         chapter_cursor = chapter_conn.cursor()
         page_cursor = page_conn.cursor()
+        comic_cursor = comic_conn.cursor()
         
-        # Get comic_id
-        comic_id = get_comic_id(chapter_cursor, comic_name)
+        # Get comic_id from comic database, not chapter database
+        comic_id = get_comic_id(comic_cursor, comic_name)
         if not comic_id:
             print(f"Comic not found: {comic_name}")
             return
@@ -145,7 +146,7 @@ def upload_pages(chapter_conn, page_conn, comic_name, chapter_folder, files):
             print(f"Could not extract chapter number from: {chapter_folder}")
             return
         
-        # Get chapter_id
+        # Get chapter_id using the chapter database connection
         chapter_id = get_chapter_id(chapter_cursor, comic_id, chapter_number)
         if not chapter_id:
             print(f"Chapter not found: {comic_name} Chapter {chapter_number}")
@@ -160,32 +161,39 @@ def upload_pages(chapter_conn, page_conn, comic_name, chapter_folder, files):
         for page_number, filename in enumerate(files, 1):
             file_path = os.path.join('Chapters', comic_name, chapter_folder, filename)
             
-            # Read the image file
-            with open(file_path, 'rb') as file:
-                image_data = file.read()
-            
-            # Check if page already exists in the new page table
-            page_cursor.execute("""
-                SELECT page_id 
-                FROM page 
-                WHERE comic_id = %s AND chapter_id = %s AND page_number = %s
-            """, (comic_id, chapter_id, page_number))
-            
-            if page_cursor.fetchone():
-                # Update existing page
+            try:
+                # Read the image file
+                with open(file_path, 'rb') as file:
+                    image_data = file.read()
+                
+                # Check if page already exists in the new page table
                 page_cursor.execute("""
-                    UPDATE page 
-                    SET page_image = %s 
+                    SELECT page_id 
+                    FROM page 
                     WHERE comic_id = %s AND chapter_id = %s AND page_number = %s
-                """, (image_data, comic_id, chapter_id, page_number))
-            else:
-                # Insert new page
-                page_cursor.execute("""
-                    INSERT INTO page (comic_id, chapter_id, page_number, page_image)
-                    VALUES (%s, %s, %s, %s)
-                """, (comic_id, chapter_id, page_number, image_data))
-            
-            print(f"  Uploaded page {page_number}/{len(files)}")
+                """, (comic_id, chapter_id, page_number))
+                
+                if page_cursor.fetchone():
+                    # Update existing page
+                    page_cursor.execute("""
+                        UPDATE page 
+                        SET page_image = %s 
+                        WHERE comic_id = %s AND chapter_id = %s AND page_number = %s
+                    """, (image_data, comic_id, chapter_id, page_number))
+                else:
+                    # Insert new page
+                    page_cursor.execute("""
+                        INSERT INTO page (comic_id, chapter_id, page_number, page_image)
+                        VALUES (%s, %s, %s, %s)
+                    """, (comic_id, chapter_id, page_number, image_data))
+                
+                print(f"  Uploaded page {page_number}/{len(files)}")
+            except FileNotFoundError:
+                print(f"  File not found: {file_path}")
+                continue
+            except Error as e:
+                print(f"  Error processing page {page_number}: {e}")
+                continue
         
         page_conn.commit()
         print(f"Successfully uploaded all pages for {comic_name} Chapter {chapter_number}")
@@ -247,52 +255,38 @@ def main():
     page_conn = get_page_db_connection()
     comic_conn = get_comic_db_connection()
     
-    try:
-        if not chapter_conn or not page_conn or not comic_conn:
-            print("Failed to connect to one or more databases.")
-            return
-        
-        # First, process cover images
-        print("\n=== PROCESSING COMIC COVER IMAGES ===")
-        process_cover_images(comic_conn)
-        
-        # Then process chapter pages
-        print("\n=== PROCESSING CHAPTER PAGES ===")
-        chapters_dir = 'Chapters'
-        
-        if not os.path.exists(chapters_dir):
-            print(f"Error: {chapters_dir} directory not found")
-            return
-            
-        # Iterate through each comic folder
-        for comic_name in os.listdir(chapters_dir):
-            comic_path = os.path.join(chapters_dir, comic_name)
-            if not os.path.isdir(comic_path):
-                continue
-            
-            # Iterate through each chapter folder
+    if not chapter_conn or not page_conn or not comic_conn:
+        print("Failed to connect to one or more databases. Exiting.")
+        return
+    
+    print("\n=== PROCESSING COMIC COVER IMAGES ===")
+    process_cover_images(comic_conn)
+    
+    print("\n=== PROCESSING CHAPTER PAGES ===")
+    chapters_dir = 'Chapters'
+    if not os.path.exists(chapters_dir):
+        print(f"Error: {chapters_dir} directory not found")
+        return
+    
+    # Process chapters
+    for comic_folder in os.listdir(chapters_dir):
+        comic_path = os.path.join(chapters_dir, comic_folder)
+        if os.path.isdir(comic_path):
             for chapter_folder in os.listdir(comic_path):
                 chapter_path = os.path.join(comic_path, chapter_folder)
-                if not os.path.isdir(chapter_path):
-                    continue
-                
-                # Get all image files in the chapter folder
-                files = [f for f in os.listdir(chapter_path) 
-                        if f.lower().endswith(('.jpg', '.jpeg', '.png', '.webp'))]
-                
-                if files:
-                    upload_pages(chapter_conn, page_conn, comic_name, chapter_folder, files)
+                if os.path.isdir(chapter_path):
+                    # Get all image files in this chapter folder
+                    files = [f for f in os.listdir(chapter_path) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', '.gif'))]
+                    if files:
+                        upload_pages(chapter_conn, page_conn, comic_conn, comic_folder, chapter_folder, files)
     
-    except Exception as e:
-        print(f"Error in main function: {e}")
-        
-    finally:
-        if chapter_conn:
-            chapter_conn.close()
-        if page_conn:
-            page_conn.close()
-        if comic_conn:
-            comic_conn.close()
+    # Close connections
+    if chapter_conn:
+        chapter_conn.close()
+    if page_conn:
+        page_conn.close()
+    if comic_conn:
+        comic_conn.close()
 
 if __name__ == "__main__":
     main() 

@@ -1,0 +1,50 @@
+services:
+  # MySQL database service
+  db:
+    image: mysql:8.0
+    container_name: esd-weebs-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_ALLOW_EMPTY_PASSWORD: "no"
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./databases/combined.txt:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - esd-network
+
+  # Application service containing all microservices
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: esd-weebs-app
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "5000-5025:5000-5025"
+    environment:
+      MYSQL_HOST: db
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root_password
+      MYSQL_PORT: 3306
+    networks:
+      - esd-network
+
+volumes:
+  mysql-data:
+    name: esd-weebs-db-data
+
+networks:
+  esd-network:
+    name: esd-network 
