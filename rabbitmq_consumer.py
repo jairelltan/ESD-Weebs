@@ -1,17 +1,18 @@
 import pika
 import json
-import mysql.connector
-from mysql.connector import Error
+import os
 import requests
 
+RABBITMQ_HOST = os.getenv('RABBITMQ_HOST', 'localhost')  
+QUEUE_NAME = os.getenv('QUEUE_NAME', 'fcfs_queue')
 # Function to connect to RabbitMQ
 def connect_to_rabbitmq():
-    connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+    connection = pika.BlockingConnection(pika.ConnectionParameters(RABBITMQ_HOST))
     channel = connection.channel()
-    channel.queue_declare(queue='fcfs_queue', durable=True)
+    channel.queue_declare(queue=QUEUE_NAME, durable=True)
     return connection, channel
 
-# Function to insert data into MySQL database
+# Function to insert data into the waitlist service
 def send_to_waitlist_service(data):
     url = "http://localhost:5003/waitlist"
     headers = {'Content-Type': 'application/json'}
@@ -28,12 +29,14 @@ def send_to_waitlist_service(data):
         print(f"Error connecting to waitlist service: {e}")
         return False
 
-# Function to process messages from RabbitMQ and insert into MySQL
+# Function to process messages from RabbitMQ and insert them into the waitlist service
 def process_message(ch, method, properties, body):
     data = json.loads(body)
-    print(f" [x] Processing data: {data}")  # Log the received data
+    if "price_per_item" in data:
+        data["price_per_item"] = float(data["price_per_item"])
+    print(f" [x] Processing data: {data}")
     
-    # Insert data into MySQL
+    # Send data to the waitlist service
     send_to_waitlist_service(data)
     
     # Acknowledge the message after processing
@@ -45,7 +48,7 @@ def main():
 
     # Set up a consumer on the 'fcfs_queue'
     channel.basic_qos(prefetch_count=1)  # Limit to one message at a time
-    channel.basic_consume(queue='fcfs_queue', on_message_callback=process_message)
+    channel.basic_consume(queue=QUEUE_NAME, on_message_callback=process_message)
 
     print(' [*] Waiting for messages. To exit press CTRL+C')
     channel.start_consuming()

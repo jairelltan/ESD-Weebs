@@ -4,6 +4,7 @@ from datetime import datetime
 import pika
 import json
 import requests
+import os
 
 app = Flask(__name__)
 CORS(app)
@@ -15,27 +16,35 @@ USER_SERVICE_URL = "http://127.0.0.1:5000/user"
 INVENTORY_SERVICE_URL = "https://personal-dwnxuxog.outsystemscloud.com/InventoryAtomicMicroservice/rest/RESTAPI/GetProductbyID"
 
 # RabbitMQ setup
-RABBITMQ_HOST = 'localhost'
+RABBITMQ_HOST = os.getenv('RABBITMQ_HOST', 'localhost')  # Use an environment variable or default to 'localhost'
 QUEUE_NAME = 'fcfs_queue'
 
 def connect_to_rabbitmq():
-    connection = pika.BlockingConnection(pika.ConnectionParameters(RABBITMQ_HOST))
-    channel = connection.channel()
-    channel.queue_declare(queue=QUEUE_NAME, durable=True)  # Make the queue durable
-    return connection, channel
+    try:
+        connection = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST))
+        channel = connection.channel()
+        channel.queue_declare(queue=QUEUE_NAME, durable=True)  # Make the queue durable
+        return connection, channel
+    except pika.exceptions.AMQPConnectionError as e:
+        print(f"Error connecting to RabbitMQ: {e}")
+        raise
 
 def publish_to_queue(channel, data):
-    message = json.dumps(data)
-    print(f" [x] Ready to send message: {message}")  # Log the message before sending it
-    channel.basic_publish(
-        exchange='',
-        routing_key=QUEUE_NAME,
-        body=message,
-        properties=pika.BasicProperties(
-            delivery_mode=2,  # Make message persistent
+    try:
+        message = json.dumps(data)
+        print(f" [x] Ready to send message: {message}")  # Log the message before sending it
+        channel.basic_publish(
+            exchange='',
+            routing_key=QUEUE_NAME,
+            body=message,
+            properties=pika.BasicProperties(
+                delivery_mode=2,  # Make message persistent
+            )
         )
-    )
-    print(f" [x] Sent data to RabbitMQ: {data}")
+        print(f" [x] Sent data to RabbitMQ: {data}")
+    except pika.exceptions.AMQPError as e:
+        print(f"Error sending message to RabbitMQ: {e}")
+        raise
 
 @app.route('/addtowaitlist/<int:user_id>/<int:product_id>', methods=['GET'])
 def get_composite_data(user_id, product_id):
@@ -65,17 +74,20 @@ def get_composite_data(user_id, product_id):
         "comic_id": product.get("Id"),
         "comic_name": product.get("comic_name"),
         "comic_volume": product.get("volume_name"),
-        "price_per_item": product.get("price_per_item"),
+        "price_per_item": float(product.get("price_per_item")),
         "timestamp": datetime.utcnow().isoformat()
     }
 
     # Send data to RabbitMQ (First-Come, First-Serve)
-    connection, channel = connect_to_rabbitmq()
-    publish_to_queue(channel, composite_data)
-    connection.close()
+    try:
+        connection, channel = connect_to_rabbitmq()
+        publish_to_queue(channel, composite_data)
+        connection.close()
+    except Exception as e:
+        print(f"Error processing the request: {str(e)}")
+        return jsonify({"error": f"Error processing the request: {str(e)}"}), 500
 
     return jsonify(composite_data)
 
 if __name__ == '__main__':
     app.run(debug=True, port=5002)
-

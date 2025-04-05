@@ -57,7 +57,7 @@ def get_users():
             "comic_id": waitlist_entry[3],
             "comic_name": waitlist_entry[4],
             "comic_volume": waitlist_entry[5],
-            "price_per_item": waitlist_entry[6],
+            "price_per_item": float(waitlist_entry[6]), 
             "timestamp":waitlist_entry[7]
         })
     

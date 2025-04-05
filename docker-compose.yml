@@ -1,5 +1,23 @@
 services:
   # MySQL database service
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: esd-weebs-rabbitmq
+    restart: always
+    ports:
+      - "5673:5672"  # External AMQP port (5672 inside container mapped to 5673)
+      - "15673:15672"  # External management UI port (15672 on host)
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - esd-network
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+
   db:
     image: mysql:8.0
     container_name: esd-weebs-db
@@ -22,6 +40,7 @@ services:
       - esd-network
 
   # Application service containing all microservices
+  # Application service containing all microservices (depends on RabbitMQ and DB)
   app:
     build:
       context: .
@@ -29,8 +48,10 @@ services:
     container_name: esd-weebs-app
     restart: always
     depends_on:
+      rabbitmq:
+        condition: service_healthy  # Ensure RabbitMQ is healthy before app starts
       db:
-        condition: service_healthy
+        condition: service_healthy  # Ensure MySQL is healthy before app starts
     ports:
       - "5000-5025:5000-5025"
     environment:
@@ -38,6 +59,8 @@ services:
       MYSQL_USER: root
       MYSQL_PASSWORD: root_password
       MYSQL_PORT: 3306
+      RABBITMQ_HOST: esd-weebs-rabbitmq
+      RABBITMQ_PORT: 5673  
     networks:
       - esd-network
 

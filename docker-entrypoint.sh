@@ -128,6 +128,9 @@ echo "All microservices started!"
 echo "Checking service health..."
 sleep 5
 
+echo "Starting background task... (rabbitmq_consumser)"
+python rabbitmq_consumer.py > "/app/logs/background_task.log" 2>&1 &
+
 # Check if services are running
 for port in $(seq 5000 5025); do
     if nc -z localhost $port 2>/dev/null; then
