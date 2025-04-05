@@ -1951,10 +1951,7 @@
                 
                 // Reload comments
                 await loadComments(threadId);
-                
-                // Update thread comment count
-                await updateThreadCommentCount(threadId);
-                
+                                
             } catch (error) {
                 console.error('Error creating comment:', error);
                 alert('Error creating comment. Please try again.');
@@ -1977,28 +1974,6 @@
             } catch (error) {
                 console.error('Error liking comment:', error);
                 alert('Error liking comment. Please try again.');
-            }
-        }
-
-        async function updateThreadCommentCount(threadId) {
-            try {
-                const response = await fetch(`http://localhost:5011/thread/${threadId}/comments/count`, {
-                    method: 'PUT'
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    // Update the thread's comment count in the UI
-                    const thread = document.querySelector(`[data-thread-id="${threadId}"]`);
-                    if (thread) {
-                        const countElement = thread.querySelector('.comment-count');
-                        if (countElement) {
-                            countElement.textContent = `${data.count} comments`;
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('Error updating thread comment count:', error);
             }
         }
 
