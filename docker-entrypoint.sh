@@ -64,6 +64,43 @@ CORS(app, resources={r"/*": {"origins": "*", "allow_headers": ["Content-Type", "
 done
 echo "CORS configurations updated!"
 
+# Special fix for cart.py which seems to have CORS issues
+echo "Applying special CORS fix for cart.py..."
+if [ -f "./cart.py" ]; then
+    # Remove any existing CORS configuration to avoid conflicts
+    sed -i '/CORS(/d' cart.py
+    sed -i '/@app.after_request/,/return response/d' cart.py
+    sed -i '/@cross_origin/d' cart.py
+    
+    # Insert our special CORS configuration right after app definition
+    sed -i '/app = Flask/a \
+# Special CORS configuration for cart service\
+CORS(app)\
+\
+@app.after_request\
+def add_cors_headers(response):\
+    response.headers[\"Access-Control-Allow-Origin\"] = \"*\"\
+    response.headers[\"Access-Control-Allow-Headers\"] = \"Content-Type, Authorization\"\
+    response.headers[\"Access-Control-Allow-Methods\"] = \"GET, POST, PUT, DELETE, OPTIONS\"\
+    return response\
+\
+@app.route(\"/cart/<int:user_id>\", methods=[\"OPTIONS\"])\
+def options_cart_user_id(user_id):\
+    response = make_response()\
+    response.headers[\"Access-Control-Allow-Origin\"] = \"*\"\
+    response.headers[\"Access-Control-Allow-Headers\"] = \"Content-Type, Authorization\"\
+    response.headers[\"Access-Control-Allow-Methods\"] = \"GET, OPTIONS\"\
+    return response\
+' cart.py
+
+    # Make sure we have the right imports
+    if ! grep -q "make_response" cart.py; then
+        sed -i 's/from flask import Flask, request, jsonify/from flask import Flask, request, jsonify, make_response/' cart.py
+    fi
+    
+    echo "Special CORS fix applied to cart.py"
+fi
+
 # Create a directory for log files
 mkdir -p /app/logs
 

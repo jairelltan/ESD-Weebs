@@ -13,9 +13,9 @@ logger = logging.getLogger(__name__)
 
 # Database configuration
 db_config = {
-    'host': 'localhost',
+    'host': 'db',
     'user': 'root',
-    'password': '',
+    'password': 'root_password',
     'database': 'comments_db'
 }
 

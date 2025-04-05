@@ -9,9 +9,9 @@ app = Flask(__name__)
 
 # Database configuration
 db_config = {
-    'host': 'localhost',
-    'user': 'root', 
-    'password': '',
+    'host': 'db',
+    'user': 'root',
+    'password': 'root_password',
     'database': 'waitlist_db'
 }
 

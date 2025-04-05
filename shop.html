@@ -481,15 +481,38 @@
                 },
 
                 fetchCartItems() {
-                    fetch(`http://localhost:5008/cart/${this.users.id}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            this.cartItems = data;
-                        })
-                        .catch(error => {
-                            console.error('Error fetching cart items:', error);
-                        });
-                },     
+                    console.log(`Attempting to fetch cart items for user ID: ${this.users.id}`);
+                    
+                    // Create a custom request with explicit headers for CORS
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('GET', `http://localhost:5008/cart/${this.users.id}`, true);
+                    
+                    // Set headers
+                    xhr.setRequestHeader('Accept', 'application/json');
+                    
+                    xhr.onload = () => {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            try {
+                                const data = JSON.parse(xhr.responseText);
+                                console.log('Cart items received via XHR:', data);
+                                this.cartItems = data;
+                            } catch (e) {
+                                console.error('Error parsing cart JSON:', e);
+                                this.cartItems = [];
+                            }
+                        } else {
+                            console.error('XHR request failed with status:', xhr.status);
+                            this.cartItems = [];
+                        }
+                    };
+                    
+                    xhr.onerror = (e) => {
+                        console.error('XHR network error when fetching cart:', e);
+                        this.cartItems = [];
+                    };
+                    
+                    xhr.send();
+                },
             }
         })
 

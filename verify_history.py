@@ -1,15 +1,66 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 import requests
 from flask_cors import CORS
 import time
 from datetime import datetime
 
 app = Flask(__name__)
-CORS(app)
+
+# Configure CORS to allow requests from any origin with proper settings
+CORS(app, resources={r"/*": {
+    "origins": "*", 
+    "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
+    "expose_headers": ["Content-Type", "X-Total-Count", "Authorization"],
+    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "supports_credentials": True
+}})
+
+# Add CORS headers to all responses
+@app.after_request
+def add_cors_headers(response):
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Requested-With,Accept,Origin")
+    response.headers.add("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS")
+    response.headers.add("Access-Control-Allow-Credentials", "true")
+    response.headers.add("Access-Control-Max-Age", "3600")
+    return response
+
+# Handle OPTIONS requests for CORS preflight
+@app.route('/', defaults={'path': ''}, methods=['OPTIONS'])
+@app.route('/<path:path>', methods=['OPTIONS'])
+def handle_options(path):
+    response = make_response()
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Requested-With,Accept,Origin")
+    response.headers.add("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS")
+    response.headers.add("Access-Control-Allow-Credentials", "true")
+    response.headers.add("Access-Control-Max-Age", "3600")
+    return response
 
 # Define service URLs
-CHAPTER_SERVICE_URL = "http://localhost:5005/api/comics"
-HISTORY_SERVICE_URL = "http://localhost:5014/api/history/user"
+CHAPTER_SERVICE_URL = "http://app:5005/api/comics"
+HISTORY_SERVICE_URL = "http://app:5014/api/history/user"
+
+# Add specific OPTIONS handlers for verify endpoints
+@app.route('/verify/comic/<int:comic_id>/user/<int:user_id>', methods=['OPTIONS'])
+def options_verify_comic(comic_id, user_id):
+    response = make_response()
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Requested-With,Accept,Origin")
+    response.headers.add("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS")
+    response.headers.add("Access-Control-Allow-Credentials", "true")
+    response.headers.add("Access-Control-Max-Age", "3600")
+    return response
+
+@app.route('/verify/chapter/<int:chapter_id>/user/<int:user_id>', methods=['OPTIONS'])
+def options_verify_chapter(chapter_id, user_id):
+    response = make_response()
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Requested-With,Accept,Origin")
+    response.headers.add("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS")
+    response.headers.add("Access-Control-Allow-Credentials", "true")
+    response.headers.add("Access-Control-Max-Age", "3600")
+    return response
 
 # Simple in-memory cache
 cache = {}

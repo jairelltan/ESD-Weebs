@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, redirect, url_for, send_file
+from flask import Flask, request, jsonify, redirect, url_for, send_file, make_response
 import requests
 from flask_cors import CORS
 import time
@@ -8,15 +8,76 @@ import io
 import base64
 
 app = Flask(__name__)
-CORS(app)
+
+# Configure CORS to allow requests from any origin with proper settings
+CORS(app, resources={r"/*": {
+    "origins": "*", 
+    "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
+    "expose_headers": ["Content-Type", "X-Total-Count", "Authorization"],
+    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "supports_credentials": True
+}})
+
+# Add CORS headers to all responses
+@app.after_request
+def add_cors_headers(response):
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Requested-With,Accept,Origin")
+    response.headers.add("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS")
+    response.headers.add("Access-Control-Allow-Credentials", "true")
+    response.headers.add("Access-Control-Max-Age", "3600")
+    return response
+
+# Handle OPTIONS requests for CORS preflight
+@app.route('/', defaults={'path': ''}, methods=['OPTIONS'])
+@app.route('/<path:path>', methods=['OPTIONS'])
+def handle_options(path):
+    response = make_response()
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Requested-With,Accept,Origin")
+    response.headers.add("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS")
+    response.headers.add("Access-Control-Allow-Credentials", "true")
+    response.headers.add("Access-Control-Max-Age", "3600")
+    return response
 
 # Define service URLs
-VERIFY_SERVICE_URL = "http://localhost:5015/verify/chapter"
-HISTORY_SERVICE_URL = "http://localhost:5014/api/history"
-USER_SERVICE_URL = "http://localhost:5000/user"
+VERIFY_SERVICE_URL = "http://app:5015/verify/chapter"
+HISTORY_SERVICE_URL = "http://app:5014/api/history"
+USER_SERVICE_URL = "http://app:5000/user"
 CHAPTER_READER_URL = "chapter-reader.html"
-VERIFY_SERVICE_URL2 = "http://localhost:5015/verify/comic/{}/user/{}"
-PAGE_SERVICE_URL = "http://localhost:5013/api/pages"
+VERIFY_SERVICE_URL2 = "http://app:5015/verify/comic/{}/user/{}"
+PAGE_SERVICE_URL = "http://app:5013/api/pages"
+
+# Add specific OPTIONS handlers for read_comic endpoints
+@app.route('/api/read_comic/<int:comic_id>/user/<int:user_id>', methods=['OPTIONS'])
+def options_read_comic(comic_id, user_id):
+    response = make_response()
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Requested-With,Accept,Origin")
+    response.headers.add("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS")
+    response.headers.add("Access-Control-Allow-Credentials", "true")
+    response.headers.add("Access-Control-Max-Age", "3600")
+    return response
+
+@app.route('/api/chapter/<int:chapter_id>/pages', methods=['OPTIONS'])
+def options_chapter_pages(chapter_id):
+    response = make_response()
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Requested-With,Accept,Origin")
+    response.headers.add("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS")
+    response.headers.add("Access-Control-Allow-Credentials", "true")
+    response.headers.add("Access-Control-Max-Age", "3600")
+    return response
+
+@app.route('/api/chapter/<int:chapter_id>/page/<int:page_number>', methods=['OPTIONS'])
+def options_page_image(chapter_id, page_number):
+    response = make_response()
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Requested-With,Accept,Origin")
+    response.headers.add("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS")
+    response.headers.add("Access-Control-Allow-Credentials", "true")
+    response.headers.add("Access-Control-Max-Age", "3600")
+    return response
 
 # Configuration
 UNLOCK_COST = 100  # Points required to unlock a chapter
@@ -38,22 +99,41 @@ def read_comic(comic_id, user_id):
         if refresh:
             verify_url += "?refresh=true"
         
-        verify_response = requests.get(verify_url)
+        print(f"Making request to verify service: {verify_url}")
         
-        if not verify_response.ok:
-            return jsonify({
-                "error": "Failed to fetch verification data",
-                "status": verify_response.status_code,
-                "message": verify_response.text
-            }), 500
-
-        # Return data as-is from verify service (already sorted)
-        return verify_response.json()
+        try:
+            verify_response = requests.get(verify_url, timeout=10)
+            print(f"Response status: {verify_response.status_code}")
+            
+            if not verify_response.ok:
+                error_details = {
+                    "error": "Failed to fetch verification data",
+                    "verify_url": verify_url,
+                    "status": verify_response.status_code,
+                    "message": verify_response.text
+                }
+                print(f"Error details: {error_details}")
+                return jsonify(error_details), 500
+                
+            # Return data as-is from verify service (already sorted)
+            return verify_response.json()
+            
+        except requests.exceptions.Timeout:
+            print(f"Timeout connecting to verify service at {verify_url}")
+            return jsonify({"error": f"Timeout connecting to verify service", "url": verify_url}), 504
+            
+        except requests.exceptions.ConnectionError:
+            print(f"Connection error with verify service at {verify_url}")
+            return jsonify({"error": f"Connection error with verify service", "url": verify_url}), 503
 
     except requests.exceptions.RequestException as e:
-        return jsonify({"error": f"Service communication error: {str(e)}"}), 500
+        error_msg = f"Service communication error: {str(e)}"
+        print(error_msg)
+        return jsonify({"error": error_msg}), 500
     except Exception as e:
-        return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
+        error_msg = f"Unexpected error: {str(e)}"
+        print(error_msg)
+        return jsonify({"error": error_msg}), 500
 
 
 @app.route('/api/chapter/<int:chapter_id>/pages', methods=['GET'])
@@ -215,7 +295,7 @@ def purchase_chapter_access(chapter_id, user_id):
             }), 402  # 402 Payment Required
         
         # Get chapter details for the redirect URL
-        chapter_response = requests.get(f"http://localhost:5005/api/chapters/{chapter_id}")
+        chapter_response = requests.get(f"http://app:5005/api/chapters/{chapter_id}")
         if not chapter_response.ok:
             return jsonify({
                 "error": "Failed to fetch chapter details", 

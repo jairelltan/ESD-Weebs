@@ -8,9 +8,9 @@ CORS(app)
 
 # Database configuration
 db_config = {
-    'host': 'localhost',
+    'host': 'db',
     'user': 'root',
-    'password': '',
+    'password': 'root_password',
     'database': 'receipt_db'
 }
 
