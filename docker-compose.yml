@@ -38,8 +38,19 @@ services:
       MYSQL_USER: root
       MYSQL_PASSWORD: root_password
       MYSQL_PORT: 3306
+      RABBITMQ_HOST: esd-weebs-rabbitmq
     networks:
       - esd-network
+ 
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: esd-weebs-rabbitmq
+    ports:
+      - "5673:5672"    
+      - "15673:15672" 
+    networks:
+      - esd-network
+      
 
 volumes:
   mysql-data:

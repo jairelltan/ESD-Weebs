@@ -1,53 +1,45 @@
 import pika
 import json
-import mysql.connector
-from mysql.connector import Error
 import requests
+import os
 
-# Function to connect to RabbitMQ
+# Connect to RabbitMQ
 def connect_to_rabbitmq():
-    connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+    RABBITMQ_HOST = os.getenv('RABBITMQ_HOST', 'localhost')
+    connection = pika.BlockingConnection(pika.ConnectionParameters(RABBITMQ_HOST))
     channel = connection.channel()
     channel.queue_declare(queue='fcfs_queue', durable=True)
     return connection, channel
 
-# Function to insert data into MySQL database
+# Send data to waitlist service
 def send_to_waitlist_service(data):
-    url = "http://localhost:5003/waitlist"
+    url = "http://waitlist:5003/waitlist"  # Use container name, not localhost
     headers = {'Content-Type': 'application/json'}
-    
     try:
         response = requests.post(url, json=data, headers=headers)
         if response.status_code == 201:
-            print("Data successfully added to the waitlist service!")
+            print("✅ Data successfully added to the waitlist service!")
             return True
         else:
-            print(f"Failed to add data: {response.text}")
+            print(f"❌ Failed to add data: {response.text}")
             return False
     except requests.exceptions.RequestException as e:
-        print(f"Error connecting to waitlist service: {e}")
+        print(f"❌ Error connecting to waitlist service: {e}")
         return False
 
-# Function to process messages from RabbitMQ and insert into MySQL
+# Process message from RabbitMQ
 def process_message(ch, method, properties, body):
     data = json.loads(body)
-    print(f" [x] Processing data: {data}")  # Log the received data
-    
-    # Insert data into MySQL
+    print(f"📦 Received: {data}")
     send_to_waitlist_service(data)
-    
-    # Acknowledge the message after processing
     ch.basic_ack(delivery_tag=method.delivery_tag)
 
-# Main function to consume messages from RabbitMQ
+# Main loop
 def main():
     connection, channel = connect_to_rabbitmq()
-
-    # Set up a consumer on the 'fcfs_queue'
-    channel.basic_qos(prefetch_count=1)  # Limit to one message at a time
+    channel.basic_qos(prefetch_count=1)
     channel.basic_consume(queue='fcfs_queue', on_message_callback=process_message)
-
-    print(' [*] Waiting for messages. To exit press CTRL+C')
+    print("🎧 Waiting for messages. Press CTRL+C to exit.")
     channel.start_consuming()
 
 if __name__ == '__main__':

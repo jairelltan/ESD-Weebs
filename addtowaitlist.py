@@ -5,6 +5,7 @@ import pika
 import json
 import requests
 
+
 app = Flask(__name__)
 CORS(app)
 
@@ -19,6 +20,8 @@ RABBITMQ_HOST = 'localhost'
 QUEUE_NAME = 'fcfs_queue'
 
 def connect_to_rabbitmq():
+    import os
+    RABBITMQ_HOST = os.getenv('RABBITMQ_HOST', 'localhost')  
     connection = pika.BlockingConnection(pika.ConnectionParameters(RABBITMQ_HOST))
     channel = connection.channel()
     channel.queue_declare(queue=QUEUE_NAME, durable=True)  # Make the queue durable
@@ -36,6 +39,10 @@ def publish_to_queue(channel, data):
         )
     )
     print(f" [x] Sent data to RabbitMQ: {data}")
+
+@app.route('/')
+def home():
+    return "Welcome to the User API!"
 
 @app.route('/addtowaitlist/<int:user_id>/<int:product_id>', methods=['GET'])
 def get_composite_data(user_id, product_id):
