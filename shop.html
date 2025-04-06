@@ -456,7 +456,7 @@
                         product.isCooldown = false;
                     }, 1500);
 
-                    alert(`${product.comic_name} added to waitlist!`)
+                    alert(`${product.comic_name} attempted to add to waitlist!`)
                     console.log(`${product.comic_name} - Volume ${product.volume_name} - ${this.users.name} id ${this.users.id} clicked on Join Waitlist!`);
 
                     const url = `http://localhost:5002/addtowaitlist/${this.users.id}/${product.Id}`;
@@ -467,6 +467,7 @@
                         .then(response => response.json())
                         .then(data => {
                             console.log('Received data:', data);
+                            alert(`${product.comic_name} successfully added to waitlist!`);
                         })
                         .catch(error => {
                             console.error('Error adding to waitlist:', error);
