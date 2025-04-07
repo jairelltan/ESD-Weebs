@@ -35,9 +35,9 @@ RUN echo 'server {\n\
     listen 8080;\n\
     server_name localhost;\n\
     root /var/www/html;\n\
-    index comics.html index.html shop.html;\n\
+    index comics.html index.html shop.html shopadmin.html;\n\
 \n\
-    # API proxy configuration\n\
+    # API proxy configuration\n\    
     location /api/user/ {\n\
         proxy_pass http://127.0.0.1:5000/;\n\
         proxy_set_header Host $host;\n\
