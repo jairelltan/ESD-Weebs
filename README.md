@@ -145,10 +145,21 @@ This system consists of 25 microservices:
 ### 1. User Service (Port: 5000)
 **Type**: Atomic
 **Database**: `user_db`
+**Database Attributes**: 
+   user_id | int (Primary Key)		
+	user_name | varchar(100)		
+	phone_number | int			
+	email | varchar(100)		
+	address | varchar(255)		
+	points | int				
+	subscriber_status | enum('MONTHLY', 'QUARTERLY', 'YEARLY', 'NIL')
 **Description**: Manages user information and authentication
 
 Endpoints:
 - GET `/user` - Get all users
+Paramaters: None
+Name 
+
 - GET `/user/{user_id}` - Get specific user
 - PUT `/user/{user_id}` - Update user details
 - PUT `/user/{user_id}/points` - Update points
@@ -281,9 +292,7 @@ Endpoints:
 
 ## Access Front-end
 
-The web interface can be accessed through:
-- http://127.0.0.1:5001/comic - Comic listings
-- http://127.0.0.1:5022/payment - Payment processing
+Need to redo this
 
 ## Dependency Installation
 
@@ -295,3 +304,4 @@ The following Python packages are required:
 - Werkzeug==2.0.3
 - python-dotenv==0.20.0
 - stripe==12.0.0 (for payment processing)
+- pika 
