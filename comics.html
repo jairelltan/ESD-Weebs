@@ -1546,25 +1546,25 @@
 
                     const content = `
                         <div class="modal-header border-0">
-                            <h5 class="modal-title" id="purchaseModalLabel" style="color: #664d00;">Chapter Locked</h5>
+                            <h5 class="modal-title" id="purchaseModalLabel" style="color: white;">Chapter Locked</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body text-center" style="background-color: #fff9db;">
-                            <p style="margin-bottom: 20px;">You need to unlock this chapter first to read it.</p>
+                            <p style="margin-bottom: 20px; color: #333333;">You need to unlock this chapter first to read it.</p>
                             <hr style="border: none; border-top: 1px solid #e6d292; margin: 20px 0;">
                             
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                <span>Chapter ${chapter.chapter_number}${chapter.title ? ': ' + chapter.title : ''}</span>
+                                <span style="color: #333333; font-weight: 500;">Chapter ${chapter.chapter_number}${chapter.title ? ': ' + chapter.title : ''}</span>
                                 <span style="background-color: #0d6efd; color: white; padding: 5px 10px; border-radius: 20px; font-size: 14px;">${data.unlock_cost} points</span>
                             </div>
                             
                             <div style="margin-bottom: 25px;">
                                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                    <span>Your balance:</span>
-                                    <span style="font-weight: bold;">${data.user_points} points</span>
+                                    <span style="color: #333333; font-weight: 500;">Your balance:</span>
+                                    <span style="font-weight: bold; color: #333333;">${data.user_points} points</span>
                                 </div>
                                 <div style="display: flex; justify-content: space-between;">
-                                    <span>After purchase:</span>
+                                    <span style="color: #333333; font-weight: 500;">After purchase:</span>
                                     <span style="font-weight: bold; ${data.can_afford ? 'color: #664d00' : 'color: #dc3545'}">${data.user_points - data.unlock_cost} points</span>
                                 </div>
                             </div>

@@ -29,454 +29,521 @@
             margin: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-
-        .navbar {
-            background-color: var(--medium-grey) !important;
-            border-bottom: 1px solid var(--accent-blue);
-            box-shadow: 0 2px 15px rgba(0, 176, 255, 0.2);
+        .reader-navbar {
+            background-color: var(--medium-grey);
+            color: var(--text-light);
+            padding: 10px 0;
             position: sticky;
             top: 0;
-            z-index: 1000;
-            padding: 12px 20px;
+            z-index: 5;
+            pointer-events: auto;
+            border-bottom: 1px solid var(--accent-blue);
+            box-shadow: 0 2px 15px rgba(0, 176, 255, 0.2);
         }
-
-        .navbar-brand {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: var(--text-highlight) !important;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            background: linear-gradient(45deg, var(--text-highlight), var(--accent-blue));
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 10px rgba(0, 176, 255, 0.3);
+        .navbar-title {
+            font-size: 1.2rem;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--text-highlight);
         }
-        
-        /* Page viewer styles */
         .page-viewer {
-            max-width: 900px;
+            max-width: 1000px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 20px 20px 60px 20px; /* Add bottom padding */
             background-color: var(--medium-grey);
             border-radius: 10px;
             margin-top: 20px;
             box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
             border: 1px solid var(--medium-blue);
-            overflow: hidden;
         }
-
-        .page-viewer-scrolling {
-            padding-bottom: 40px;
-        }
-
-        /* Comic pages */
-        .comic-page {
-            width: 100%;
-            height: auto;
-            margin-bottom: 20px;
-            border-radius: 5px;
+        .scrolling-mode .comic-page {
+            max-width: 100%;
+            display: block;
+            margin: 0 auto 10px auto;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            opacity: 0;
+            transition: opacity 0.3s ease-in;
             border: 2px solid var(--medium-blue);
-            transition: transform 0.3s ease;
-            cursor: zoom-in;
         }
-
-        .comic-page:hover {
-            transform: scale(1.01);
-            border-color: var(--accent-blue);
-            box-shadow: var(--glow-effect);
+        .scrolling-mode .comic-page.loaded {
+            opacity: 1;
         }
-
         /* Page-by-page mode styles */
+        .page-by-page-mode .page-viewer {
+            overflow: hidden;
+            position: relative;
+            height: 70vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: var(--deep-grey); /* Changed to match body background */
+            z-index: 1;
+            padding: 0; /* Remove padding */
+            border: none; /* Remove border */
+            box-shadow: none; /* Remove box shadow */
+            margin: 0 auto; /* Center the viewer */
+        }
+        .page-by-page-mode .comic-page {
+            max-height: calc(100vh - 120px); /* Account for navbar and bottom navigation */
+            max-width: 100%;
+            display: none;
+            object-fit: contain;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            margin: 0 auto;
+            opacity: 0;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: auto;
+            border: none; /* Remove border */
+            background-color: transparent; /* Ensure background is transparent */
+        }
+        .page-by-page-mode .comic-page.active {
+            display: block;
+            opacity: 1;
+        }
         .page-navigation-overlay {
             position: absolute;
-            top: 0;
-            height: 100%;
+            top: 60px; /* Start below the navbar */
+            height: calc(100% - 60px); /* Adjust height to exclude navbar */
             width: 50%;
             cursor: pointer;
             z-index: 10;
-            transition: background-color 0.2s ease;
+            background-color: transparent;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: auto;
+            -webkit-tap-highlight-color: transparent; /* Prevent blue highlight on mobile */
+            outline: none; /* Remove focus outline */
+            user-select: none; /* Prevent text selection */
         }
-
+        .page-navigation-overlay:focus,
+        .page-navigation-overlay:active {
+            background-color: rgba(0, 176, 255, 0.1);
+            outline: none;
+        }
         .page-navigation-overlay.left {
             left: 0;
-            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="%23ffffff"><path d="M15 18l-6-6 6-6" stroke="%232979FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'), auto;
         }
-
-        .page-navigation-overlay.left:hover {
-            background: linear-gradient(to right, rgba(0, 176, 255, 0.1), transparent);
-        }
-
         .page-navigation-overlay.right {
             right: 0;
-            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="%23ffffff"><path d="M9 18l6-6-6-6" stroke="%232979FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'), auto;
         }
-
-        .page-navigation-overlay.right:hover {
-            background: linear-gradient(to left, rgba(0, 176, 255, 0.1), transparent);
+        .page-navigation-overlay:hover {
+            opacity: 0.5;
+            background-color: rgba(0, 176, 255, 0.1);
         }
-
+        /* Page indicator is no longer used */
         .page-indicator {
-            position: absolute;
-            bottom: 10px;
-            left: 0;
-            right: 0;
+            display: none !important;
+        }
+        /* Bottom page tracker styles */
+        .bottom-page-tracker {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            padding: 0 10px;
+            color: var(--text-light);
+            font-weight: 500;
+            border-left: 1px solid var(--medium-blue);
+            border-right: 1px solid var(--medium-blue);
+            background-color: var(--light-grey);
+            min-width: 100px;
+            font-size: 0.9rem;
             text-align: center;
-            color: var(--text-light);
-            background: linear-gradient(to top, var(--medium-grey) 0%, transparent 100%);
-            padding: 15px 5px 5px;
-            font-size: 14px;
-            z-index: 5;
-            border-radius: 0 0 10px 10px;
         }
-
-        /* Button styles */
-        .btn-primary {
-            background-color: var(--highlight-blue);
-            border-color: var(--highlight-blue);
-            color: white;
-            transition: all 0.3s;
-        }
-
-        .btn-primary:hover {
-            background-color: var(--accent-blue);
-            border-color: var(--accent-blue);
-            box-shadow: var(--glow-effect);
-            transform: translateY(-2px);
-        }
-
-        .btn-outline-secondary {
-            color: var(--text-light);
-            border-color: var(--medium-blue);
-            background-color: transparent;
-            transition: all 0.3s;
-        }
-
-        .btn-outline-secondary:hover {
-            background-color: var(--medium-blue);
-            color: var(--text-highlight);
-            border-color: var(--accent-blue);
-        }
-
-        /* Chapter navigation */
         .chapter-navigation {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: var(--medium-grey);
-            border-radius: 8px;
-            border: 1px solid var(--medium-blue);
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            margin-top: 1rem;
+            position: sticky;
+            bottom: 0;
+            z-index: 100;
+            padding: 0.5rem 1rem;
+            background-color: var(--medium-grey);
+            border: 1px solid var(--accent-blue);
         }
-
-        .chapter-nav-btn {
+        .chapter-navigation button {
+            flex: 1;
+            margin: 0 5px;
+            height: 48px;
             display: flex;
             align-items: center;
-            flex: 2;
-            transition: all 0.3s;
+            justify-content: center;
+            background-color: var(--medium-blue);
+            color: var(--text-light);
+            border: 1px solid var(--medium-blue);
         }
-
-        .chapter-nav-btn:hover {
-            transform: translateY(-2px);
+        .chapter-navigation button:hover {
+            background-color: var(--highlight-blue);
+            border-color: var(--highlight-blue);
+            box-shadow: var(--glow-effect);
         }
-
-        .chapter-nav-btn i {
-            margin: 0 10px;
+        .chapter-navigation button .chapter-number {
+            display: block;
+            font-size: 0.75rem;
+            margin-top: 2px;
+            opacity: 0.9;
         }
-
-        .prev-chapter {
-            justify-content: flex-start;
+        .chapter-navigation button i {
+            margin-top: -1px;
         }
-
-        .next-chapter {
-            justify-content: flex-end;
+        /* Bottom navigation specific styles */
+        .chapter-navigation.mt-4.mb-5 {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            background-color: var(--medium-grey);
+            padding: 0;
+            z-index: 1000;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.2);
+            border-radius: 0;
+            margin: 0 !important; /* Override Bootstrap margins */
+            border-top: 1px solid var(--accent-blue);
         }
-
-        .chapter-info {
-            flex: 3;
+        .chapter-navigation.mt-4.mb-5 button {
+            flex: 1.5;
+            background-color: var(--medium-blue);
+            color: var(--text-light);
+            border: none;
+            padding: 15px;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+            border-radius: 0;
+        }
+        .chapter-navigation.mt-4.mb-5 button:hover {
+            background-color: var(--highlight-blue);
+        }
+        .chapter-navigation.mt-4.mb-5 button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .chapter-navigation.mt-4.mb-5 button i {
+            margin: 0 5px;
+        }
+        .loading-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 70vh;
+            color: var(--text-light);
+        }
+        .btn-reading-mode {
+            background-color: var(--medium-grey);
+            border-radius: 20px;
+            padding: 5px 15px;
+            border: 1px solid var(--medium-blue);
+            color: var(--text-light);
+        }
+        .btn-reading-mode:hover {
+            background-color: var(--light-grey);
+            border-color: var(--accent-blue);
+            color: var(--text-highlight);
+        }
+        .zoomed {
+            cursor: zoom-out !important;
+        }
+        .zoomable {
+            cursor: zoom-in;
+        }
+        .zoom-controls {
+            background-color: var(--medium-grey);
+            border: 1px solid var(--medium-blue);
+            border-radius: 4px;
+            padding: 5px 10px;
+            z-index: 4;
+            pointer-events: auto;
+        }
+        .zoom-btn {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            background-color: var(--medium-blue);
+            border: 1px solid var(--accent-blue);
+            color: var(--text-light);
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .zoom-btn:hover {
+            background-color: var(--highlight-blue);
+        }
+        .zoom-slider-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .zoom-level {
+            min-width: 45px;
+            text-align: center;
+            font-size: 14px;
+            color: var(--text-light);
+        }
+        .zoom-slider {
+            width: 100px;
+            cursor: pointer;
+        }
+        
+        /* Thread styles */
+        #threadContainer {
+            padding-top: 20px;
+            padding-bottom: 0;
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 20; /* Increased z-index to be higher than navigation overlays */
+            background-color: var(--medium-grey);
+            pointer-events: auto;
+            margin-bottom: 60px; /* Match the height of the nav bar */
+            border-radius: 10px;
+            border: 1px solid var(--medium-blue);
+        }
+        #threadContainer .card {
+            border: none;
+            background-color: var(--light-grey);
+        }
+        #threadContainer .card-header {
+            padding: 15px 20px;
+            background-color: var(--highlight-blue);
+            color: white;
+        }
+        #threadContainer .list-group-item {
+            border-left: none;
+            border-right: none;
+            padding: 15px;
+            transition: background-color 0.2s;
+            background-color: var(--light-grey);
+            color: var(--text-light);
+            border-color: var(--medium-blue);
+        }
+        #threadContainer .list-group-item:first-child {
+            border-top: none;
+        }
+        #threadContainer .list-group-item:hover {
+            background-color: var(--medium-grey);
+        }
+        #threadContainer .list-group-item h6 {
+            font-weight: 600;
+            color: var(--text-highlight);
+        }
+        #newThreadForm .card {
+            border: 1px solid var(--medium-blue);
+            background-color: #ffffff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        #newThreadForm .card-body {
+            background-color: #ffffff;
+            color: #333333;
+        }
+        
+        #newThreadForm .form-label {
+            color: #333333;
+            font-weight: 500;
+        }
+        
+        #newThreadForm .form-control {
+            background-color: #f8f9fa;
+            color: #333333;
+            border: 1px solid #ced4da;
+        }
+        
+        #newThreadForm .form-control:focus {
+            background-color: #ffffff;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+        /* Toggle button active state */
+        #toggleThreadsBtn.active {
+            background-color: var(--highlight-blue);
+            color: var(--text-light);
+            border-color: var(--highlight-blue);
+            box-shadow: var(--glow-effect);
+        }
+        /* Update thread container to ensure it doesn't overflow */
+        .container.mt-5#threadContainer {
+            margin-bottom: 60px !important; /* Ensure this overrides other styles */
+            padding-bottom: 20px;
+        }
+        /* Add styling for the page tracker in the bottom navigation */
+        .bottom-page-tracker {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            padding: 0 10px;
+            color: var(--text-light);
+            font-weight: 500;
+            border-left: 1px solid var(--medium-blue);
+            border-right: 1px solid var(--medium-blue);
+            background-color: var(--light-grey);
+            min-width: 100px;
+            font-size: 0.9rem;
             text-align: center;
         }
-
-        .chapter-title {
-            font-weight: bold;
-            font-size: 1.1rem;
-            color: var(--text-highlight);
-            margin-bottom: 5px;
+        /* Keep the buttons flexible but ensure page tracker has space */
+        .chapter-navigation.mt-4.mb-5 button {
+            flex: 2;
         }
-
+        /* Ensure the top page tracker doesn't exist at all */
+        #pageTracker {
+            display: none !important;
+        }
+        /* Always show the bottom page tracker */
+        .scrolling-mode .bottom-page-tracker {
+            display: flex !important;
+        }
+        .page-by-page-mode .bottom-page-tracker {
+            display: flex !important;
+        }
+        
         /* Custom scrollbar */
         ::-webkit-scrollbar {
             width: 10px;
         }
-
         ::-webkit-scrollbar-track {
             background: var(--medium-grey);
         }
-
         ::-webkit-scrollbar-thumb {
             background: var(--highlight-blue);
             border-radius: 5px;
         }
-
         ::-webkit-scrollbar-thumb:hover {
             background: var(--accent-blue);
         }
-
-        /* Loading container */
-        .loading-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 70vh;
-            color: var(--text-light);
+        
+        /* Hide any unwanted page trackers from the reader UI */
+        body > *:not(.reader-navbar):not(.chapter-navigation):not(.loading-container):not(.page-viewer):not(#threadContainer):not(#pageViewer):not(script):not(noscript) {
+            display: none !important;
         }
-
-        .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid var(--dark-blue);
-            border-top: 5px solid var(--accent-blue);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 20px;
+        
+        /* Target specifically any fixed page indicators that might be injected */
+        body > div[style*="position: fixed"][style*="top"] {
+            display: none !important;
         }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        
+        /* Hide any specific page indicators that might be at the top of the page */
+        body > div:not(.reader-navbar):not(.page-viewer):not(.loading-container):not(.chapter-navigation):not(#threadContainer):not(#pageViewer) {
+            display: none !important;
         }
-
-        /* View mode toggle */
-        .view-mode-container {
-            margin-bottom: 15px;
-            text-align: right;
-        }
-
-        .view-mode-toggle {
-            background-color: var(--medium-grey);
-            border: 1px solid var(--medium-blue);
-            padding: 5px 10px;
-            border-radius: 5px;
-            color: var(--text-light);
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .view-mode-toggle:hover {
-            border-color: var(--accent-blue);
-            color: var(--text-highlight);
-        }
-
-        .view-mode-toggle i {
-            margin-right: 5px;
-        }
-
-        /* Zoom controls */
-        .zoom-controls {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 5px 10px;
-            background-color: var(--medium-grey);
-            border-radius: 20px;
-            margin-bottom: 10px;
-            border: 1px solid var(--medium-blue);
-        }
-
-        .zoom-btn {
-            background-color: var(--medium-blue);
-            color: var(--text-light);
+        
+        .page-by-page-mode #pageViewer {
+            background-color: var(--deep-grey); /* Match body background */
+            box-shadow: none;
             border: none;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 5px;
-            cursor: pointer;
-            transition: all 0.3s;
+            margin-top: 0;
+            max-width: 100%; /* Full width */
         }
-
-        .zoom-btn:hover {
-            background-color: var(--accent-blue);
-            color: white;
-            transform: scale(1.1);
+        
+        /* Add styling to make the reader area fullscreen in page mode */
+        body.page-mode-active {
+            overflow-y: hidden; /* Prevent scrolling when in page mode */
         }
-
-        .zoom-level {
-            margin: 0 10px;
-            font-size: 0.9rem;
-            color: var(--text-light);
-        }
-
-        /* Page by page mode */
-        .page-by-page-mode .comic-page {
-            display: none;
-            margin: 0 auto;
-            max-height: 70vh;
-            width: auto;
-            object-fit: contain;
-        }
-
-        .page-by-page-mode .comic-page.active {
-            display: block;
-        }
-
-        .page-by-page-container {
-            position: relative;
-            min-height: 70vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* Thread container styles */
-        .thread-container {
-            margin-top: 30px;
-            padding: 20px;
-            background-color: var(--medium-grey);
-            border-radius: 10px;
-            border: 1px solid var(--medium-blue);
-        }
-
-        .thread-card {
-            margin-bottom: 20px;
-            background-color: var(--light-grey);
-            border: 1px solid var(--medium-blue);
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        .card-header {
-            background-color: var(--dark-blue);
-            color: var(--text-highlight);
-            font-weight: bold;
-            padding: 15px;
-            border-bottom: 1px solid var(--medium-blue);
-        }
-
-        .list-group-item {
-            background-color: var(--light-grey);
-            border-color: var(--medium-blue);
-            color: var(--text-light);
-            padding: 15px;
-        }
-
-        .comment-author {
-            font-weight: bold;
-            color: var(--text-highlight);
-            margin-right: 10px;
-        }
-
-        .comment-date {
-            font-size: 0.85rem;
-            color: #aaa;
-        }
-
-        .comment-content {
-            margin-top: 10px;
-        }
-
-        .comment-form {
-            display: flex;
-            margin-top: 20px;
-        }
-
-        .comment-form .form-control {
-            flex: 1;
-            background-color: var(--light-grey);
-            border: 1px solid var(--medium-blue);
-            color: var(--text-light);
-            border-radius: 5px 0 0 5px;
-        }
-
-        .comment-form .btn {
-            border-radius: 0 5px 5px 0;
-        }
-
-        .bottom-page-tracker {
+        
+        .page-by-page-mode {
             position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
+            top: 58px; /* Height of the navbar */
+            left: 0;
+            right: 0;
+            bottom: 60px; /* Height of the bottom navigation */
+            background-color: var(--deep-grey);
+            z-index: 10;
+            margin: 0 !important;
+            max-width: 100% !important;
+            width: 100% !important;
+            padding: 0 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            border: none !important;
+        }
+        
+        /* Override any bootstrap container styles that might be causing gray edges */
+        .container .page-by-page-mode,
+        .container-fluid .page-by-page-mode {
+            max-width: 100% !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        
+        /* Make sure page viewer is full width in page mode */
+        .page-by-page-mode.page-viewer,
+        #pageViewer.page-by-page-mode {
+            max-width: 100% !important;
+            width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+            background-color: var(--deep-grey) !important;
+        }
+        
+        /* Comment form and comment input styling */
+        .input-group textarea.form-control {
+            background-color: #ffffff;
+            color: #333333;
+            border: 1px solid #ced4da;
+        }
+        
+        .input-group textarea.form-control:focus {
+            background-color: #ffffff;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+        
+        /* Style the thread list and comment forms for better readability */
+        .comment-item {
             background-color: var(--medium-grey);
-            color: var(--text-light);
-            padding: 8px 15px;
-            border-radius: 20px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-            border: 1px solid var(--medium-blue);
-            display: flex;
-            align-items: center;
-            z-index: 1000;
-        }
-
-        .bottom-page-tracker-page {
-            margin: 0 5px;
-            font-weight: bold;
-            color: var(--text-highlight);
-        }
-
-        .bottom-tracker-btn {
-            background-color: transparent;
-            border: none;
-            color: var(--text-light);
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .bottom-tracker-btn:hover {
-            background-color: var(--medium-blue);
-            color: var(--text-highlight);
-        }
-
-        /* Toggle comment section button */
-        .toggle-comments-button {
-            display: block;
-            width: 100%;
+            border-radius: 6px;
             padding: 10px;
-            text-align: center;
-            background-color: var(--medium-grey);
+            margin-bottom: 10px;
+        }
+        
+        .comment-item p {
             color: var(--text-light);
-            border: 1px solid var(--medium-blue);
-            border-radius: 5px;
-            margin-top: 20px;
-            cursor: pointer;
-            transition: all 0.3s;
+            margin-bottom: 5px;
         }
-
-        .toggle-comments-button:hover {
-            background-color: var(--medium-blue);
-            color: var(--text-highlight);
+        
+        /* Better styling for thread items */
+        #threadsList .list-group-item h6 {
+            font-size: 18px;
+            margin-bottom: 8px;
         }
-
-        .toggle-comments-button.active {
-            background-color: var(--highlight-blue);
-            color: white;
-            border-color: var(--highlight-blue);
+        
+        #threadsList .list-group-item p {
+            font-size: 16px;
+            margin-bottom: 10px;
         }
-
-        .toggle-comments-button i {
-            margin-right: 8px;
-            transition: transform 0.3s;
-        }
-
-        .toggle-comments-button.active i {
-            transform: rotate(180deg);
+        
+        /* Target specifically the fixed page number indicator at the top of the screen */
+        .page-tracker,
+        [id*="page"][id*="tracker"]:not(.bottom-page-tracker),
+        [class*="page"][class*="tracker"]:not(.bottom-page-tracker),
+        [style*="position: fixed"][style*="top"],
+        [style*="position:fixed"][style*="top"],
+        div[style*="position:absolute"][style*="top: 0"],
+        div[style*="position: absolute"][style*="top: 0"],
+        div[style*="top: 0"][style*="z-index"],
+        div[style*="top:0"][style*="z-index"] {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
         }
     </style>
 </head>
 <body>
-    <nav class="navbar">
+    <nav class="reader-navbar">
         <div class="container-fluid">
             <div class="row align-items-center">
                 <div class="col-auto">
@@ -527,18 +594,12 @@
         <!-- Pages will be loaded here -->
     </div>
 
-    <div class="page-tracker text-center mt-2" style="display: none;" id="pageTracker">
-        <span class="badge bg-primary">
-            Page <span id="currentPageNum">1</span> of <span id="totalPagesNum">0</span>
-        </span>
-    </div>
-
     <div class="container mt-5" id="threadContainer" style="display: none; max-width: 800px;">
         <div class="card mb-5 shadow">
             <div class="card-header bg-primary text-white">
                 <div class="d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Chapter Discussion</h5>
-                    <button class="btn btn-light btn-sm" onclick="showNewThreadForm()">
+                    <button class="btn btn-light btn-sm fw-bold" onclick="showNewThreadForm()" style="color: var(--highlight-blue); border: none; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
                         <i class="bi bi-plus-circle"></i> New Thread
                     </button>
                 </div>
@@ -547,6 +608,9 @@
                 <!-- New Thread Form (initially hidden) -->
                 <div id="newThreadForm" style="display: none;" class="mb-3">
                     <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="mb-0">Create New Thread</h6>
+                        </div>
                         <div class="card-body">
                             <form onsubmit="createNewThread(event)">
                                 <div class="mb-3">
@@ -709,21 +773,21 @@
                             purchaseDialog.innerHTML = `
                                 <div style="max-width: 450px; width: 100%; background-color: #fff9db; border-radius: 8px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
                                     <h3 style="text-align: center; color: #664d00; margin-top: 0;">Chapter Locked</h3>
-                                    <p style="text-align: center; margin-bottom: 20px;">You need to unlock this chapter first to read it.</p>
+                                    <p style="text-align: center; margin-bottom: 20px; color: #333333; font-weight: normal;">You need to unlock this chapter first to read it.</p>
                                     <hr style="border: none; border-top: 1px solid #e6d292; margin: 20px 0;">
                                     
                                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                        <span>Chapter ${chapterNumber}: ${title || 'Untitled'}</span>
+                                        <span style="color: #333333; font-weight: 500;">Chapter ${chapterNumber}${title ? ': ' + title : ''}</span>
                                         <span style="background-color: #0d6efd; color: white; padding: 5px 10px; border-radius: 20px; font-size: 14px;">${unlockCost} points</span>
                                     </div>
                                     
                                     <div style="margin-bottom: 25px;">
                                         <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                            <span>Your balance:</span>
-                                            <span style="font-weight: bold;">${userData.points} points</span>
+                                            <span style="color: #333333; font-weight: 500;">Your balance:</span>
+                                            <span style="font-weight: bold; color: #333333;">${userData.points} points</span>
                                         </div>
                                         <div style="display: flex; justify-content: space-between;">
-                                            <span>After purchase:</span>
+                                            <span style="color: #333333; font-weight: 500;">After purchase:</span>
                                             <span style="font-weight: bold; ${canAfford ? 'color: #664d00' : 'color: #dc3545'}">${userData.points - unlockCost} points</span>
                                         </div>
                                     </div>
@@ -740,7 +804,7 @@
                                                 <i class="bi bi-plus-circle" style="margin-right: 8px;"></i> Get More Points
                                                </a>`
                                         }
-                                        <button id="cancelPurchaseBtn" style="width: 100%; background-color: transparent; color: #6c757d; border: 1px solid #6c757d; padding: 12px; border-radius: 4px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                                        <button id="cancelPurchaseBtn" style="width: 100%; background-color: transparent; color: #333333; border: 1px solid #6c757d; padding: 12px; border-radius: 4px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
                                             <i class="bi bi-x" style="margin-right: 8px;"></i> Cancel
                                         </button>
                                     </div>
@@ -1157,21 +1221,21 @@
                 purchaseDialog.innerHTML = `
                     <div style="max-width: 450px; width: 100%; background-color: #fff9db; border-radius: 8px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
                         <h3 style="text-align: center; color: #664d00; margin-top: 0;">Chapter Locked</h3>
-                        <p style="text-align: center; margin-bottom: 20px;">You need to unlock this chapter first to read it.</p>
+                        <p style="text-align: center; margin-bottom: 20px; color: #333333; font-weight: normal;">You need to unlock this chapter first to read it.</p>
                         <hr style="border: none; border-top: 1px solid #e6d292; margin: 20px 0;">
                         
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                            <span>Chapter ${chapterNumber}${title ? ': ' + title : ''}</span>
+                            <span style="color: #333333; font-weight: 500;">Chapter ${chapterNumber}${title ? ': ' + title : ''}</span>
                             <span style="background-color: #0d6efd; color: white; padding: 5px 10px; border-radius: 20px; font-size: 14px;">${unlockCost} points</span>
                         </div>
                         
                         <div style="margin-bottom: 25px;">
                             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                <span>Your balance:</span>
-                                <span style="font-weight: bold;">${userData.points} points</span>
+                                <span style="color: #333333; font-weight: 500;">Your balance:</span>
+                                <span style="font-weight: bold; color: #333333;">${userData.points} points</span>
                             </div>
                             <div style="display: flex; justify-content: space-between;">
-                                <span>After purchase:</span>
+                                <span style="color: #333333; font-weight: 500;">After purchase:</span>
                                 <span style="font-weight: bold; ${canAfford ? 'color: #664d00' : 'color: #dc3545'}">${userData.points - unlockCost} points</span>
                             </div>
                         </div>
@@ -1188,7 +1252,7 @@
                                     <i class="bi bi-plus-circle" style="margin-right: 8px;"></i> Get More Points
                                    </a>`
                             }
-                            <button id="cancelPurchaseBtn" style="width: 100%; background-color: transparent; color: #6c757d; border: 1px solid #6c757d; padding: 12px; border-radius: 4px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                            <button id="cancelPurchaseBtn" style="width: 100%; background-color: transparent; color: #333333; border: 1px solid #6c757d; padding: 12px; border-radius: 4px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
                                 <i class="bi bi-x" style="margin-right: 8px;"></i> Cancel
                             </button>
                         </div>
@@ -1449,6 +1513,9 @@
             
             // Apply mode-specific styles
             if (mode === 'page') {
+                // Add page-mode-active class to body
+                document.body.classList.add('page-mode-active');
+                
                 pageViewer.classList.remove('scrolling-mode');
                 pageViewer.classList.add('page-by-page-mode');
                 
@@ -1486,20 +1553,6 @@
                 pageViewer.appendChild(leftOverlay);
                 pageViewer.appendChild(rightOverlay);
                 
-                // Show page indicator
-                if (!pageIndicator) {
-                    const indicator = document.createElement('div');
-                    indicator.className = 'page-indicator';
-                    indicator.id = 'pageIndicator';
-                    pageViewer.appendChild(indicator);
-                }
-                
-                updatePageIndicator();
-                
-                if (pageIndicator) {
-                    pageIndicator.style.display = 'block';
-                }
-                
                 // Show zoom controls for page mode
                 if (zoomControls) {
                     zoomControls.style.display = 'flex';
@@ -1508,6 +1561,9 @@
                 // Add scroll event listener for page tracking
                 window.removeEventListener('scroll', handleScroll);
             } else {
+                // Remove page-mode-active class from body
+                document.body.classList.remove('page-mode-active');
+                
                 pageViewer.classList.add('scrolling-mode');
                 pageViewer.classList.remove('page-by-page-mode');
                 
@@ -1636,27 +1692,17 @@
             }
         }
         
-        // Update page indicator
+        // Update page indicator - now just focused on the in-page indicator
         function updatePageIndicator() {
-            const pages = document.querySelectorAll('.comic-page');
-            let indicator = document.getElementById('pageIndicator');
-            
-            // Create indicator if it doesn't exist
-            if (!indicator) {
-                indicator = document.createElement('div');
-                indicator.className = 'page-indicator';
-                indicator.id = 'pageIndicator';
-                document.getElementById('pageViewer').appendChild(indicator);
-            }
-            
-            // Update text content
-            if (indicator) {
-                indicator.textContent = `Page ${currentPageIndex + 1} of ${pages.length}`;
-                indicator.style.display = currentReadingMode === 'page' ? 'block' : 'none';
-            }
-            
-            // Also update the bottom tracker
+            // Don't create or update any in-page indicators at all
+            // Just update the bottom tracker
             updateBottomPageTracker();
+            
+            // Remove any existing page indicators
+            const existingIndicator = document.getElementById('pageIndicator');
+            if (existingIndicator) {
+                existingIndicator.remove();
+            }
         }
         
         // Function to update the bottom page tracker
@@ -2040,9 +2086,9 @@
             }
             
             const commentElements = comments.map(comment => `
-                <div class="comment-item border-start border-2 ps-3 mb-2">
+                <div class="comment-item border-start border-2 ps-3 mb-2" style="border-color: var(--highlight-blue) !important;">
                     <p class="mb-1">${comment.content}</p>
-                    <small class="text-muted">
+                    <small class="text-light">
                         Posted on ${new Date(comment.created_at).toLocaleDateString()}
                         • ${comment.likes} likes
                     </small>
@@ -2156,17 +2202,18 @@
         }
 
         // Function to update page tracker
-        function updatePageTracker(currentIndex, totalPages) {
-            const pageTracker = document.getElementById('pageTracker');
-            const currentPageNum = document.getElementById('currentPageNum');
-            const totalPagesNum = document.getElementById('totalPagesNum');
-            
-            if (pageTracker && currentPageNum && totalPagesNum) {
-                currentPageNum.textContent = currentIndex + 1;
-                totalPagesNum.textContent = totalPages;
-                pageTracker.style.display = 'block';
-            }
-        }
+        // Removed as we no longer need the top page tracker
+        // function updatePageTracker(currentIndex, totalPages) {
+        //     const pageTracker = document.getElementById('pageTracker');
+        //     const currentPageNum = document.getElementById('currentPageNum');
+        //     const totalPagesNum = document.getElementById('totalPagesNum');
+        //     
+        //     if (pageTracker && currentPageNum && totalPagesNum) {
+        //         currentPageNum.textContent = currentIndex + 1;
+        //         totalPagesNum.textContent = totalPages;
+        //         pageTracker.style.display = 'block';
+        //     }
+        // }
 
         // Function to show a specific page
         function showPage(index) {
@@ -2175,7 +2222,8 @@
                 if (i === index) {
                     page.classList.add('active');
                     currentPageIndex = index;
-                    updatePageTracker(index, pageElements.length);
+                    // Update the bottom tracker instead
+                    updateBottomPageTracker();
                 } else {
                     page.classList.remove('active');
                 }
