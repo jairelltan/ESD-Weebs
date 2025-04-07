@@ -32,15 +32,6 @@
             z-index: 9999;
         }
 
-        .cart-icon {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            font-size: 30px;
-            color: #000;
-            z-index: 1000;
-            cursor: pointer;
-        }
 
         .modal-body {
             max-height: 400px;
@@ -51,9 +42,6 @@
 
 <body>
     <div id="app">
-        <div class="cart-icon" @click="toggleCartModal">
-            <i class="bi bi-cart-fill"></i>
-        </div>
         <!-- Loading Screen -->
         <div v-if="loading" class="loading-screen">
             <div class="spinner-border text-light" role="status">
@@ -96,36 +84,36 @@
             </div>
         </div>
 
-        <div class="modal fade" id="cartModal" tabindex="-1" aria-labelledby="cartModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="cartModalLabel">Your Cart</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div v-if="cartItems.length > 0">
-                            <ul class="list-group">
-                                <li class="list-group-item" v-for="item in cartItems" :key="item.id">
-                                    <div class="d-flex justify-content-between">
-                                        <span>{{ item.comic_name }} - Volume {{ item.comic_volume }}</span>
-                                        <p>Quantity: {{ item.quantity }}</p>
-                                        <p>Price: {{ item.price_per_item }}</p>
-                                    </div>
-                                </li>
-                            </ul>
-                        </div>
-                        <div v-else>
-                            <p>Your cart is empty.</p>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        <button type="button" class="btn btn-primary">Proceed to Checkout</button>
-                    </div>
-                </div>
+        <!-- Waitlist Entries Section -->
+        <div class="container mt-5">
+            <h2>Current Waitlist Entries</h2>
+            <div v-if="waitlist.length === 0">
+                <p>No waitlist entries yet.</p>
+            </div>
+            <div v-else>
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Comic Name</th>
+                            <th>Volume</th>
+                            <th>Price</th>
+                            <th>Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="entry in waitlist" :key="entry.id">
+                            <td>{{ entry.username }}</td>
+                            <td>{{ entry.comic_name }}</td>
+                            <td>{{ entry.comic_volume }}</td>
+                            <td>${{ entry.price_per_item.toFixed(2) }}</td>
+                            <td>{{ new Date(entry.timestamp).toLocaleString() }}</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
+
 
 
         <!-- Stock Update Form (For Demo Purposes)-->
@@ -141,8 +129,7 @@
             </form>
         </div>
         <div class="container mt-5">
-            <button class="btn btn-primary"
-                @click="updateWaitlist">
+            <button class="btn btn-primary" @click="updateWaitlist">
                 Click here to update waitlist
             </button>
         </div>
@@ -169,7 +156,7 @@
                     selectedProduct: null, // Store selected product for stock update
                     newStock: 0, // New stock value for the form
                     users: {},
-                    cartItems: []
+                    waitlist: [],
                 };
             },
             mounted() {
@@ -208,6 +195,15 @@
                         console.error('Error fetching user data:', error);
                         this.loading = false;
                     });
+                //Waitlist Entries
+                fetch('http://localhost:5003/waitlist')
+                    .then(response => response.json())
+                    .then(data => {
+                        this.waitlist = data;
+                    })
+                    .catch(error => {
+                        console.error('Error fetching waitlist:', error);
+                    });
             },
             methods: {
                 // Set selected product and its stock to be updated (Demo Purposes Only!)
@@ -216,9 +212,9 @@
                     this.newStock = product.quantity_in_stock; // Pre-fill the stock input with the current stock
                 },
 
-                updateWaitlist(){
+                updateWaitlist() {
                     const url = `http://localhost:5010/start_task`;
-                    
+
                     fetch(url, {
                         method: 'POST',
                     })
@@ -230,44 +226,8 @@
                             console.error('Error updating waitlist', error);
                             alert('Error updating waitlist. Please try again.');
                         });
-                    
+
                 },
-
-                // Add product to cart
-                addToCart(product) {
-
-
-                    alert(`${product.comic_name} added to cart!`)
-                    console.log(`${product.comic_name} - Volume ${product.volume_name} - ${this.users.name} of id ${this.users.id} clicked on Add to Cart!`);
-
-                    const url = `http://localhost:5009/addtocart/${this.users.id}/${product.Id}`;
-
-                    // I dont want them to spam
-                    product.isCooldown = true;
-                    setTimeout(() => {
-                        product.isCooldown = false;
-                    }, 1500);
-
-                    // Send a GET request to the backend
-                    fetch(url, { method: 'GET' })
-                        .then(response => response.json())
-                        .then(data => {
-                            console.log('Received data:', data);
-
-                            // Reduce stock immediately to prevent spam clicks
-                            product.quantity_in_stock--;
-
-                            // Disable the button if stock is depleted
-                            if (product.quantity_in_stock <= 0) {
-                                product.outOfStock = true; // Flag to disable the button
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error adding to cart:', error);
-                            alert('Error adding to cart. Please try again.');
-                        });
-                },
-
 
                 addToWaitlist(product) {
                     if (product.isCooldown) return;
@@ -292,23 +252,6 @@
                         .catch(error => {
                             console.error('Error adding to waitlist:', error);
                             alert('Error adding to waitlist. Please try again.');
-                        });
-                },
-
-                toggleCartModal() {
-                    this.fetchCartItems();
-                    const cartModal = new bootstrap.Modal(document.getElementById('cartModal'));
-                    cartModal.show();
-                },
-
-                fetchCartItems() {
-                    fetch(`http://localhost:5008/cart/${this.users.id}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            this.cartItems = data;
-                        })
-                        .catch(error => {
-                            console.error('Error fetching cart items:', error);
                         });
                 },
 
