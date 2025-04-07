@@ -11,10 +11,63 @@
 
 
     <style>
+        :root {
+            --deep-grey: #1A1A1A; /* Dark grey instead of black */
+            --medium-grey: #242424; /* Medium grey for backgrounds */
+            --light-grey: #2D2D2D; /* Lighter grey for elements */
+            --dark-blue: #051937;
+            --medium-blue: #0B3366;
+            --light-blue: #0D47A1;
+            --highlight-blue: #2979FF;
+            --accent-blue: #00B0FF;
+            --text-light: #e0e1dd;
+            --text-highlight: #82E9FF;
+            --glow-effect: 0 0 10px rgba(0, 176, 255, 0.6);
+            --card-bg: rgba(36, 36, 36, 0.7);
+            --card-hover: rgba(45, 45, 45, 0.8);
+        }
+
+        body {
+            background-color: var(--deep-grey);
+            color: var(--text-light);
+            background-image: linear-gradient(to bottom, var(--deep-grey) 90%, var(--dark-blue));
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background-color: var(--deep-grey) !important;
+            box-shadow: 0 2px 15px rgba(0, 176, 255, 0.2);
+            border-bottom: 1px solid var(--accent-blue);
+        }
+
+        .btn-primary {
+            background-color: var(--highlight-blue);
+            border-color: var(--highlight-blue);
+            transition: all 0.3s;
+            border-radius: 6px;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-blue);
+            border-color: var(--accent-blue);
+            box-shadow: var(--glow-effect);
+            transform: translateY(-2px);
+        }
+
         .product-image {
             width: 100%;
             height: 250px;
             object-fit: contain;
+            border: 3px solid var(--dark-blue);
+            padding: 10px;
+            background-color: rgba(26, 26, 26, 0.7);
+            transition: transform 0.3s;
+            border-radius: 8px;
+        }
+
+        .card:hover .product-image {
+            transform: scale(1.05);
         }
 
         /* Loading spinner styling */
@@ -23,7 +76,7 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background-color: rgba(0, 0, 0, 0.5);
+            background-color: rgba(26, 26, 26, 0.9);
             color: white;
             position: fixed;
             top: 0;
@@ -34,26 +87,403 @@
 
         .cart-icon {
             position: fixed;
-            top: 5px;
+            top: 15px;
             right: 20px;
             font-size: 30px;
-            color: #ffffff;
+            color: var(--accent-blue);
             z-index: 1000;
             cursor: pointer;
+            filter: drop-shadow(0 0 5px rgba(0, 176, 255, 0.7));
+            transition: all 0.3s ease;
+        }
+
+        .cart-icon:hover {
+            transform: scale(1.1);
+            color: var(--text-highlight);
         }
 
         .modal-body {
             max-height: 400px;
             overflow-y: auto;
         }
+
         .user-points {
-            background-color: #ffd700;
-            color: #000;
+            background-color: var(--highlight-blue);
+            color: var(--deep-grey);
             padding: 6px 12px;
             border-radius: 20px;
             font-weight: bold;
             display: inline-flex;
             align-items: center;
+            box-shadow: var(--glow-effect);
+        }
+
+        /* Custom card styling */
+        .card {
+            background-color: var(--medium-grey);
+            border: 1px solid var(--medium-blue);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+            transition: transform 0.3s, box-shadow 0.3s;
+            margin-bottom: 25px;
+            border-radius: 10px;
+            overflow: hidden;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 176, 255, 0.3);
+            border-color: var(--accent-blue);
+        }
+
+        .card-body {
+            color: var(--text-light);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background-color: var(--medium-grey);
+        }
+
+        .card-title {
+            color: var(--text-highlight);
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+        }
+
+        .card-text {
+            color: var(--text-light);
+            margin-bottom: 10px;
+        }
+
+        /* Modal styling */
+        .modal-content {
+            background-color: var(--medium-grey);
+            border: 1px solid var(--highlight-blue);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-header {
+            border-bottom: 1px solid var(--accent-blue);
+        }
+
+        .modal-footer {
+            border-top: 1px solid var(--accent-blue);
+        }
+
+        .btn-secondary {
+            background-color: var(--dark-blue);
+            border-color: var(--dark-blue);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--medium-blue);
+            border-color: var(--highlight-blue);
+            box-shadow: var(--glow-effect);
+        }
+
+        .list-group-item {
+            background-color: var(--medium-grey);
+            color: var(--text-light);
+            border-color: var(--medium-blue);
+            margin-bottom: 5px;
+            border-radius: 5px;
+            transition: all 0.2s ease;
+        }
+
+        .list-group-item:hover {
+            background-color: var(--light-grey);
+            transform: translateX(5px);
+        }
+
+        .text-danger {
+            color: #ff6b8b !important;
+        }
+
+        .text-danger:hover {
+            color: #ff8ea6 !important;
+        }
+
+        .text-success {
+            color: #4ade80 !important;
+        }
+
+        /* Payment form styling */
+        #card-element {
+            background-color: var(--dark-blue);
+            border: 1px solid var(--highlight-blue);
+            color: var(--text-light);
+        }
+
+        /* Container styling */
+        .container {
+            background-color: rgba(36, 36, 36, 0.7);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--deep-grey); 
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--highlight-blue); 
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-blue); 
+        }
+
+        .spinner-border {
+            color: var(--highlight-blue) !important;
+        }
+
+        /* Button hover effects */
+        .btn {
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Text highlight for price */
+        .price-text {
+            color: var(--text-highlight);
+            font-weight: bold;
+        }
+
+        /* Subtle glow for inputs */
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--highlight-blue) !important;
+            box-shadow: var(--glow-effect) !important;
+        }
+        
+        /* New product grid styling */
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+        
+        .mt-spacer {
+            margin-top: 40px;
+        }
+        
+        .product-price {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 15px 0;
+        }
+        
+        .product-stock {
+            margin-bottom: 15px;
+        }
+        
+        .product-actions {
+            margin-top: auto;
+        }
+        
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--text-highlight) !important;
+            letter-spacing: 1px;
+        }
+        
+        .header-section {
+            text-align: center;
+            padding: 40px 0;
+            position: relative;
+            background-color: var(--deep-grey);
+            margin-top: -20px;
+        }
+        
+        .header-title {
+            font-size: 2.2rem;
+            margin-bottom: 15px;
+            color: var(--text-highlight);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-weight: 800;
+            position: relative;
+            display: inline-block;
+            text-shadow: 0 0 10px rgba(0, 176, 255, 0.4);
+        }
+        
+        .header-subtitle {
+            font-size: 1.2rem;
+            margin-bottom: 0;
+            color: var(--text-light);
+            opacity: 0.8;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .btn-close {
+            filter: invert(1) brightness(200%);
+        }
+        
+        .btn i {
+            margin-right: 5px;
+        }
+        
+        .trash-icon {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .trash-icon:hover {
+            transform: scale(1.2);
+        }
+        
+        /* Toast notification styling */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1060;
+        }
+        
+        .toast {
+            background-color: var(--deep-grey);
+            color: var(--text-light);
+            border: 1px solid var(--highlight-blue);
+        }
+        
+        .toast-header {
+            background-color: var(--highlight-blue);
+            color: var(--deep-grey);
+        }
+        
+        /* Animation effects */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+        
+        /* Available Comics Header Styling */
+        .available-comics-header {
+            position: relative;
+            padding: 30px 0;
+            text-align: center;
+            margin-bottom: 0;
+            background: linear-gradient(90deg, transparent 0%, var(--dark-blue) 30%, var(--dark-blue) 70%, transparent 100%);
+            overflow: hidden;
+        }
+        
+        .available-comics-header h1 {
+            font-size: 3.5rem;
+            font-weight: 900;
+            color: var(--text-highlight);
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            margin: 0;
+            text-shadow: 0 0 15px rgba(0, 176, 255, 0.5);
+            position: relative;
+            z-index: 2;
+        }
+        
+        .available-comics-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(0, 176, 255, 0.2) 0%, transparent 70%);
+            z-index: 1;
+        }
+        
+        .available-comics-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent 0%, var(--accent-blue) 30%, var(--accent-blue) 70%, transparent 100%);
+            z-index: 1;
+        }
+        
+        .header-container {
+            padding: 0;
+            border-radius: 0;
+            margin-top: 0;
+            overflow: hidden;
+        }
+        
+        /* Comic-themed decorative elements */
+        .comic-decoration {
+            position: absolute;
+            background-color: var(--accent-blue);
+            opacity: 0.1;
+            border-radius: 50%;
+            z-index: 0;
+        }
+        
+        .comic-decoration-1 {
+            width: 100px;
+            height: 100px;
+            top: -20px;
+            left: 10%;
+            animation: float 8s ease-in-out infinite;
+        }
+        
+        .comic-decoration-2 {
+            width: 60px;
+            height: 60px;
+            bottom: 20px;
+            right: 15%;
+            animation: float 6s ease-in-out infinite;
+            animation-delay: 1s;
+        }
+        
+        @keyframes float {
+            0% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(10deg); }
+            100% { transform: translateY(0) rotate(0deg); }
+        }
+        
+        /* Price tag styling */
+        .price-tag {
+            position: relative;
+            display: inline-block;
+            padding: 5px 15px;
+            background-color: var(--highlight-blue);
+            color: white;
+            font-weight: bold;
+            border-radius: 3px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        
+        .price-tag::after {
+            content: '';
+            position: absolute;
+            right: -10px;
+            top: 0;
+            width: 0;
+            height: 0;
+            border-top: 13px solid transparent;
+            border-bottom: 13px solid transparent;
+            border-left: 10px solid var(--highlight-blue);
         }
     </style>
 </head>
@@ -70,18 +500,34 @@
             </div>
         </div>
 
+        <!-- Toast notifications container -->
+        <div class="toast-container">
+            <div class="toast" role="alert" aria-live="assertive" aria-atomic="true" id="notificationToast">
+                <div class="toast-header">
+                    <strong class="me-auto">Comic Shop</strong>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body" id="toastMessage">
+                    Item added to cart successfully!
+                </div>
+            </div>
+        </div>
+
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
             <div class="container">
-                <a class="navbar-brand" href="#">Shop</a>
+                <a class="navbar-brand" href="#">
+                    <i class="bi bi-book-half me-2" style="color: var(--accent-blue);"></i>
+                    <span style="background: linear-gradient(to right, var(--text-highlight), var(--accent-blue)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Comic Shop</span>
+                </a>
                 <div class="d-flex align-items-center">
                     <button class="btn btn-primary me-3" onclick="window.location.href='comics.html'">
-                        <i class="fas fa-crown"></i> Back to comics
+                        <i class="bi bi-book"></i> Back to comics
                     </button>
                     <button class="btn btn-primary me-3" onclick="window.location.href='subscribe.html'">
-                        <i class="fas fa-crown"></i> Subscribe
+                        <i class="bi bi-star-fill"></i> Subscribe
                     </button>
                     <div class="user-points me-3">
-                        <i class="bi bi-coin"></i> {{ users && users.points >= 99999999 ? 'Unlimited' : (users ? users.points : '...') }} Points
+                        <i class="bi bi-coin me-1"></i> {{ users && users.points >= 99999999 ? 'Unlimited' : (users ? users.points : '...') }} Points
                     </div>
                     <div class="dropdown">
                         <button class="btn btn-link text-white dropdown-toggle text-decoration-none" type="button">
@@ -92,35 +538,41 @@
             </div>
         </nav>
 
-        <!-- Welcome Section -->
-        <div class="container mt-3">
-            <div class="bg-light p-5 rounded text-center">
-                <h1 class="display-4">Welcome to the Shop!</h1>
-                <p class="lead">Buy books to support your favourite comic book creators.</p>
-                <p> You are: {{users.name}}</p>
-                <p> Points: {{users.points}}</p>
-                <hr class="my-4">
-                <p>If the book is out of stock, try out the preorder function!</p>
+        <!-- Header Section -->
+        <div class="container header-container mt-3 fade-in">
+            <div class="available-comics-header">
+                <div class="comic-decoration comic-decoration-1"></div>
+                <div class="comic-decoration comic-decoration-2"></div>
+                <h1>Available Comics</h1>
+            </div>
+            <div class="header-section">
+                <h2 class="header-title">Comic Book Collection</h2>
+                <p class="header-subtitle">Expand your library with exclusive titles from your favorite creators</p>
             </div>
         </div>
 
         <!-- Products Section -->
-        <div class="container mt-5" v-if="!loading">
-            <div class="row">
-                <div class="col-md-4" v-for="product in products" :key="product.Id">
-                    <div class="card mb-4" @click="selectProduct(product)">
+        <div class="container mt-spacer" v-if="!loading">
+            <div class="product-grid">
+                <div v-for="(product, index) in products" :key="product.Id" class="fade-in" :style="{ animationDelay: index * 0.1 + 's' }">
+                    <div class="card h-100" @click="selectProduct(product)">
                         <img :src="`data:image/jpeg;base64,${product.image}`" class="card-img-top product-image"
                             alt="Product Image">
                         <div class="card-body">
                             <h5 class="card-title">{{ product.comic_name }} - Volume {{ product.volume_name }}</h5>
-                            <p class="card-text">Price: ${{ product.price_per_item.toFixed(2) }}</p>
-                            <p class="card-text">Stock: {{ product.quantity_in_stock }} available</p>
+                            <div class="price-tag">${{ product.price_per_item.toFixed(2) }}</div>
+                            <p class="product-stock">Status: <span :class="product.quantity_in_stock > 0 ? 'text-success' : 'text-danger'">
+                                {{ product.quantity_in_stock > 0 ? product.quantity_in_stock + ' in stock' : 'Out of stock' }}
+                            </span></p>
 
                             <!-- Button Text based on stock availability -->
-                            <button class="btn btn-primary" :disabled="product.isCooldown"
-                                @click="product.quantity_in_stock > 0 ? addToCart(product) : addToWaitlist(product)">
-                                {{ product.quantity_in_stock > 0 ? 'Purchase' : 'Join Waitlist' }}
-                            </button>
+                            <div class="product-actions">
+                                <button class="btn btn-primary w-100" :disabled="product.isCooldown"
+                                    @click.stop="product.quantity_in_stock > 0 ? addToCart(product) : addToWaitlist(product)">
+                                    <i :class="product.quantity_in_stock > 0 ? 'bi bi-cart-plus' : 'bi bi-bell'"></i>
+                                    {{ product.quantity_in_stock > 0 ? 'Add to Cart' : 'Join Waitlist' }}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -140,20 +592,19 @@
                                 <li class="list-group-item" v-for="item in cartItems" :key="item.id">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div class="col-4">
-                                            <p>{{ item.comic_name }} - Volume {{ item.comic_volume }}</p>
+                                            <p class="mb-0">{{ item.comic_name }} - Volume {{ item.comic_volume }}</p>
                                         </div>
                                         <div class="col-2">
-                                            <p>Quantity: {{ item.quantity }}</p>
+                                            <p class="mb-0">Quantity: {{ item.quantity }}</p>
                                         </div>
                                         <div class="co-2">
-                                            <p>Price per item: {{ item.price_per_item }}</p>
+                                            <p class="mb-0">Price: ${{ item.price_per_item }}</p>
                                         </div>
                                         <div class="col-2">
-                                            <p><strong>Total: {{ (item.price_per_item * item.quantity).toFixed(2)
-                                                    }}</strong></p>
+                                            <p class="mb-0"><strong>Total: ${{ (item.price_per_item * item.quantity).toFixed(2) }}</strong></p>
                                         </div>
                                         <div class="col-auto">
-                                            <i class="bi bi-trash text-danger" @click="deleteEntry(item)"></i>
+                                            <i class="bi bi-trash text-danger trash-icon" @click="deleteEntry(item)"></i>
                                         </div>
                                     </div>
                                 </li>
@@ -166,7 +617,7 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                         <button type="button" class="btn btn-primary" @click="proceedtoCheckout"
-                            :disabled="paymentProcessing">
+                            :disabled="paymentProcessing || cartItems.length === 0">
                             {{ paymentProcessing ? 'Processing...' : 'Proceed to Checkout' }}
                         </button>
                     </div>
@@ -185,9 +636,9 @@
                     <div class="modal-body">
                         <form id="payment-form">
                             <div class="mb-3">
-                                <h4 class="text-center mb-3">Total Amount: ${{ calculateTotal() }}</h4>
+                                <h4 class="text-center mb-3">Total Amount: <span class="price-text">${{ calculateTotal() }}</span></h4>
                                 <label for="card-element" class="form-label">Credit or debit card</label>
-                                <div id="card-element" class="form-control" style="height: 40px; padding-top: 10px;">
+                                <div id="card-element" class="form-control" style="height: 40px; padding-top: 10px; background-color: white;">
                                 </div>
                                 <div id="card-errors" class="text-danger mt-2" role="alert"></div>
                             </div>
@@ -201,9 +652,11 @@
                 </div>
             </div>
         </div>
-        <button class="btn btn-primary me-3" style="margin-left: 50px;" onclick="window.location.href='shopadmin.html'">
-            <i class="fas fa-crown"></i> Admin page for Shop (Demo purposes only)
-        </button>
+        <div class="container mt-3 mb-4 text-center">
+            <button class="btn btn-primary" onclick="window.location.href='shopadmin.html'">
+                <i class="bi bi-gear"></i> Admin Panel (Demo purposes only)
+            </button>
+        </div>
     </div>
 
 
@@ -224,16 +677,39 @@
                     stripe: null,
                     elements: null,
                     card: null,
-                    paymentProcessing: false
+                    paymentProcessing: false,
+                    toast: null
                 };
             },
             mounted() {
+                // Initialize toast
+                this.toast = new bootstrap.Toast(document.getElementById('notificationToast'), {
+                    delay: 3000
+                });
+
                 // Initialize Stripe
                 this.stripe = Stripe('pk_test_51R6nIRFRwiBVrzVlYE7jVVVxhXRxI8S9Vv9OagRWQqhitOwgBF1hoiOKkJr3PDZUvqaxI16rQrdMPx018CMKK9hR00dakf2erY'); // Replace with your actual publishable key
                 this.elements = this.stripe.elements();
 
                 // Create card Element and mount it
-                this.card = this.elements.create('card');
+                this.card = this.elements.create('card', {
+                    style: {
+                        base: {
+                            color: '#32325d',
+                            fontFamily: '"Helvetica Neue", Helvetica, sans-serif',
+                            fontSmoothing: 'antialiased',
+                            fontSize: '16px',
+                            '::placeholder': {
+                                color: '#aab7c4'
+                            },
+                            backgroundColor: 'white'
+                        },
+                        invalid: {
+                            color: '#fa755a',
+                            iconColor: '#fa755a'
+                        }
+                    }
+                });
                 this.card.mount('#card-element');
 
                 // Handle validation errors
@@ -283,31 +759,38 @@
                     });
             },
             methods: {
+                // Show toast message
+                showToast(message) {
+                    document.getElementById('toastMessage').textContent = message;
+                    this.toast.show();
+                },
+
                 // Set selected product and its stock to be updated (Demo Purposes Only!)
                 selectProduct(product) {
                     this.selectedProduct = product;
                     this.newStock = product.quantity_in_stock; // Pre-fill the stock input with the current stock
                 },
 
-
                 // Add product to cart
                 addToCart(product) {
-
                     console.log(`${product.comic_name} - Volume ${product.volume_name} - ${this.users.name} of id ${this.users.id} clicked on Add to Cart!`);
-                    alert(`${product.comic_name} added to cart!`)
-                    const url = `http://localhost:5009/addtocart/${this.users.id}/${product.Id}`;
-
+                    
                     // I dont want them to spam
                     product.isCooldown = true;
                     setTimeout(() => {
                         product.isCooldown = false;
                     }, 1500);
 
+                    const url = `http://localhost:5009/addtocart/${this.users.id}/${product.Id}`;
+
                     // Send a GET request to the backend
                     fetch(url, { method: 'GET' })
                         .then(response => response.json())
                         .then(data => {
                             console.log('Received data:', data);
+
+                            // Show success message
+                            this.showToast(`${product.comic_name} added to cart!`);
 
                             // Reduce stock immediately to prevent spam clicks
                             product.quantity_in_stock--;
@@ -319,7 +802,7 @@
                         })
                         .catch(error => {
                             console.error('Error adding to cart:', error);
-                            alert('Error adding to cart. Please try again.');
+                            this.showToast('Error adding to cart. Please try again.');
                         });
                 },
 
@@ -331,7 +814,7 @@
 
                 proceedtoCheckout() {
                     if (this.cartItems.length === 0) {
-                        alert("Your cart is empty!");
+                        this.showToast("Your cart is empty!");
                         return;
                     }
 
@@ -349,7 +832,7 @@
 
                 processPayment() {
                     if (!this.users || !this.users.id) {
-                        alert("User ID is missing. Please log in before making a payment.");
+                        this.showToast("User ID is missing. Please log in before making a payment.");
                         return;
                     }
 
@@ -377,14 +860,14 @@
                         .then(response => response.json())
                         .then(data => {
                             if (data.error) {
-                                alert('Error: ' + data.error);
+                                this.showToast('Error: ' + data.error);
                                 console.error("Server Response:", data);
                                 this.paymentProcessing = false;
                                 return;
                             }
 
                             if (!data.clientSecret) {
-                                alert('Payment initiation failed: Missing clientSecret.');
+                                this.showToast('Payment initiation failed: Missing clientSecret.');
                                 console.error("Missing clientSecret in response:", data);
                                 this.paymentProcessing = false;
                                 return;
@@ -405,7 +888,7 @@
                                 this.paymentProcessing = false;
                             } else {
                                 // Payment successful
-                                alert('Payment successful! Notification sent.');
+                                this.showToast('Payment successful! Thank you for your purchase.');
 
                                 // Clear cart after payment
                                 this.cartItems = [];
@@ -416,12 +899,15 @@
                                 const cartModal = bootstrap.Modal.getInstance(document.getElementById('cartModal'));
                                 if (cartModal) cartModal.hide();
 
-                                location.reload()
+                                // Reload after a delay to refresh the page
+                                setTimeout(() => {
+                                    location.reload();
+                                }, 2000);
                             }
                         })
                         .catch(error => {
                             console.error('Payment process error:', error);
-                            alert("An unexpected error occurred. Please try again.");
+                            this.showToast("An unexpected error occurred. Please try again.");
                             this.paymentProcessing = false;
                         });
                 },
@@ -439,14 +925,16 @@
                         .then(response => response.json())
                         .then(data => {
                             if (data.message) {
-                                alert(data.message);
+                                this.showToast(data.message);
+                                // Remove the item from local cart array
+                                this.cartItems = this.cartItems.filter(item => item.id !== cart_id);
                             } else if (data.error) {
-                                alert(data.error);
+                                this.showToast(data.error);
                             }
                         })
                         .catch(error => {
                             console.error('Error:', error);
-                            alert('There was an error removing the item from the cart.');
+                            this.showToast('There was an error removing the item from the cart.');
                         });
                 },
 
@@ -459,9 +947,6 @@
                         product.isCooldown = false;
                     }, 1500);
 
-                    alert(`${product.comic_name} attempted to add to waitlist!`)
-                    console.log(`${product.comic_name} - Volume ${product.volume_name} - ${this.users.name} id ${this.users.id} clicked on Join Waitlist!`);
-
                     const url = `http://localhost:5002/addtowaitlist/${this.users.id}/${product.Id}`;
 
                     fetch(url, {
@@ -470,11 +955,11 @@
                         .then(response => response.json())
                         .then(data => {
                             console.log('Received data:', data);
-                            alert(`${product.comic_name} successfully added to waitlist!`);
+                            this.showToast(`${product.comic_name} successfully added to waitlist!`);
                         })
                         .catch(error => {
                             console.error('Error adding to waitlist:', error);
-                            alert('Error adding to waitlist. Please try again.');
+                            this.showToast('Error adding to waitlist. Please try again.');
                         });
                 },
 
@@ -503,16 +988,19 @@
                             } catch (e) {
                                 console.error('Error parsing cart JSON:', e);
                                 this.cartItems = [];
+                                this.showToast('Error loading cart data');
                             }
                         } else {
                             console.error('XHR request failed with status:', xhr.status);
                             this.cartItems = [];
+                            this.showToast('Error: Could not connect to cart service');
                         }
                     };
                     
                     xhr.onerror = (e) => {
                         console.error('XHR network error when fetching cart:', e);
                         this.cartItems = [];
+                        this.showToast('Network error when loading cart');
                     };
                     
                     xhr.send();

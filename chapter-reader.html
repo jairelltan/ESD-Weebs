@@ -7,343 +7,476 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
-        body {
-            background-color: #f5f5f5;
-            padding-bottom: 0 !important; /* Override any body padding */
-            margin-bottom: 0 !important;
-            overscroll-behavior-y: none; /* Prevent scroll bounce */
-            height: 100%;
-            margin: 0;
-            padding: 0;
+        :root {
+            --deep-grey: #1A1A1A; /* Dark grey instead of black */
+            --medium-grey: #242424; /* Medium grey for backgrounds */
+            --light-grey: #2D2D2D; /* Lighter grey for elements */
+            --dark-blue: #051937;
+            --medium-blue: #0B3366;
+            --light-blue: #0D47A1;
+            --highlight-blue: #2979FF;
+            --accent-blue: #00B0FF;
+            --text-light: #e0e1dd;
+            --text-highlight: #82E9FF;
+            --glow-effect: 0 0 10px rgba(0, 176, 255, 0.6);
         }
-        .reader-navbar {
-            background-color: #343a40;
-            color: white;
-            padding: 10px 0;
+
+        body {
+            background-color: var(--deep-grey);
+            color: var(--text-light);
+            background-image: linear-gradient(to bottom, var(--deep-grey) 90%, var(--dark-blue));
+            min-height: 100vh;
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .navbar {
+            background-color: var(--medium-grey) !important;
+            border-bottom: 1px solid var(--accent-blue);
+            box-shadow: 0 2px 15px rgba(0, 176, 255, 0.2);
             position: sticky;
             top: 0;
-            z-index: 5;
-            pointer-events: auto;
+            z-index: 1000;
+            padding: 12px 20px;
         }
-        .navbar-title {
-            font-size: 1.2rem;
-            font-weight: 500;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--text-highlight) !important;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            background: linear-gradient(45deg, var(--text-highlight), var(--accent-blue));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 10px rgba(0, 176, 255, 0.3);
         }
+        
+        /* Page viewer styles */
         .page-viewer {
-            max-width: 1000px;
+            max-width: 900px;
             margin: 0 auto;
-            padding: 20px 20px 60px 20px; /* Add bottom padding */
-        }
-        .scrolling-mode .comic-page {
-            max-width: 100%;
-            display: block;
-            margin: 0 auto 10px auto;
-            border-radius: 4px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            opacity: 0;
-            transition: opacity 0.3s ease-in;
-        }
-        .scrolling-mode .comic-page.loaded {
-            opacity: 1;
-        }
-        /* Page-by-page mode styles */
-        .page-by-page-mode .page-viewer {
+            padding: 20px;
+            background-color: var(--medium-grey);
+            border-radius: 10px;
+            margin-top: 20px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--medium-blue);
             overflow: hidden;
-            position: relative;
-            height: 70vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: #f0f0f0;
-            z-index: 1;
         }
-        .page-by-page-mode .comic-page {
-            max-height: calc(100vh - 58px);
-            max-width: 100%;
-            display: none;
-            object-fit: contain;
-            transition: transform 0.3s ease, opacity 0.3s ease;
-            margin: 0 auto;
-            opacity: 0;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            pointer-events: auto;
+
+        .page-viewer-scrolling {
+            padding-bottom: 40px;
         }
-        .page-by-page-mode .comic-page.active {
-            display: block;
-            opacity: 1;
+
+        /* Comic pages */
+        .comic-page {
+            width: 100%;
+            height: auto;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            border: 2px solid var(--medium-blue);
+            transition: transform 0.3s ease;
+            cursor: zoom-in;
         }
+
+        .comic-page:hover {
+            transform: scale(1.01);
+            border-color: var(--accent-blue);
+            box-shadow: var(--glow-effect);
+        }
+
+        /* Page-by-page mode styles */
         .page-navigation-overlay {
             position: absolute;
-            top: 60px; /* Start below the navbar */
-            height: calc(100% - 60px); /* Adjust height to exclude navbar */
+            top: 0;
+            height: 100%;
             width: 50%;
             cursor: pointer;
             z-index: 10;
-            background-color: transparent;
-            opacity: 0;
-            transition: opacity 0.2s ease;
-            pointer-events: auto;
-            -webkit-tap-highlight-color: transparent; /* Prevent blue highlight on mobile */
-            outline: none; /* Remove focus outline */
-            user-select: none; /* Prevent text selection */
+            transition: background-color 0.2s ease;
         }
-        .page-navigation-overlay:focus,
-        .page-navigation-overlay:active {
-            background-color: rgba(0,0,0,0.05);
-            outline: none;
-        }
+
         .page-navigation-overlay.left {
             left: 0;
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="%23ffffff"><path d="M15 18l-6-6 6-6" stroke="%232979FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'), auto;
         }
+
+        .page-navigation-overlay.left:hover {
+            background: linear-gradient(to right, rgba(0, 176, 255, 0.1), transparent);
+        }
+
         .page-navigation-overlay.right {
             right: 0;
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="%23ffffff"><path d="M9 18l6-6-6-6" stroke="%232979FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'), auto;
         }
-        .page-navigation-overlay:hover {
-            opacity: 0.5;
-            background-color: rgba(0,0,0,0.05);
+
+        .page-navigation-overlay.right:hover {
+            background: linear-gradient(to left, rgba(0, 176, 255, 0.1), transparent);
         }
+
         .page-indicator {
             position: absolute;
             bottom: 10px;
             left: 0;
             right: 0;
             text-align: center;
-            color: #333;
-            background-color: rgba(255,255,255,0.7);
-            padding: 5px;
+            color: var(--text-light);
+            background: linear-gradient(to top, var(--medium-grey) 0%, transparent 100%);
+            padding: 15px 5px 5px;
             font-size: 14px;
-            z-index: 3;
-            pointer-events: none;
+            z-index: 5;
+            border-radius: 0 0 10px 10px;
         }
-        .page-tracker {
-            position: fixed;
-            bottom: 70px; /* Position above the nav bar */
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 4;
-            background-color: rgba(0, 0, 0, 0.7);
-            padding: 8px 16px;
-            border-radius: 20px;
+
+        /* Button styles */
+        .btn-primary {
+            background-color: var(--highlight-blue);
+            border-color: var(--highlight-blue);
             color: white;
-            font-size: 14px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            pointer-events: none;
+            transition: all 0.3s;
         }
-        .page-tracker .badge {
-            font-size: 14px;
-            padding: 6px 12px;
+
+        .btn-primary:hover {
+            background-color: var(--accent-blue);
+            border-color: var(--accent-blue);
+            box-shadow: var(--glow-effect);
+            transform: translateY(-2px);
         }
-        .chapter-navigation {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 1rem;
-            position: sticky;
-            bottom: 0;
-            z-index: 100;
-            padding: 0.5rem 1rem;
-        }
-        .chapter-navigation button {
-            flex: 1;
-            margin: 0 5px;
-            height: 48px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .chapter-navigation button .chapter-number {
-            display: block;
-            font-size: 0.75rem;
-            margin-top: 2px;
-            opacity: 0.9;
-        }
-        .chapter-navigation button i {
-            margin-top: -1px;
-        }
-        /* Bottom navigation specific styles */
-        .chapter-navigation.mt-4.mb-5 {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            display: flex;
-            justify-content: space-between;
-            background-color: #0d6efd;
-            padding: 0;
-            z-index: 1000;
-            box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
-            border-radius: 0;
-            margin: 0 !important; /* Override Bootstrap margins */
-        }
-        .chapter-navigation.mt-4.mb-5 button {
-            flex: 1.5;
+
+        .btn-outline-secondary {
+            color: var(--text-light);
+            border-color: var(--medium-blue);
             background-color: transparent;
-            color: white;
-            border: none;
+            transition: all 0.3s;
+        }
+
+        .btn-outline-secondary:hover {
+            background-color: var(--medium-blue);
+            color: var(--text-highlight);
+            border-color: var(--accent-blue);
+        }
+
+        /* Chapter navigation */
+        .chapter-navigation {
+            margin-top: 20px;
             padding: 15px;
-            font-size: 1rem;
+            background-color: var(--medium-grey);
+            border-radius: 8px;
+            border: 1px solid var(--medium-blue);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .chapter-nav-btn {
             display: flex;
             align-items: center;
-            justify-content: center;
-            transition: background-color 0.2s;
-            border-radius: 0;
+            flex: 2;
+            transition: all 0.3s;
         }
-        .chapter-navigation.mt-4.mb-5 button:hover {
-            background-color: rgba(255, 255, 255, 0.1);
+
+        .chapter-nav-btn:hover {
+            transform: translateY(-2px);
         }
-        .chapter-navigation.mt-4.mb-5 button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
+
+        .chapter-nav-btn i {
+            margin: 0 10px;
         }
-        .chapter-navigation.mt-4.mb-5 button i {
-            margin: 0 5px;
+
+        .prev-chapter {
+            justify-content: flex-start;
         }
+
+        .next-chapter {
+            justify-content: flex-end;
+        }
+
+        .chapter-info {
+            flex: 3;
+            text-align: center;
+        }
+
+        .chapter-title {
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: var(--text-highlight);
+            margin-bottom: 5px;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--medium-grey);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--highlight-blue);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-blue);
+        }
+
+        /* Loading container */
         .loading-container {
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
+            justify-content: center;
             height: 70vh;
+            color: var(--text-light);
         }
-        .btn-reading-mode {
-            background-color: rgba(255,255,255,0.9);
-            border-radius: 20px;
-            padding: 5px 15px;
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid var(--dark-blue);
+            border-top: 5px solid var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
         }
-        .zoomed {
-            cursor: zoom-out !important;
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
-        .zoomable {
-            cursor: zoom-in;
+
+        /* View mode toggle */
+        .view-mode-container {
+            margin-bottom: 15px;
+            text-align: right;
         }
-        .zoom-controls {
-            background-color: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 4px;
+
+        .view-mode-toggle {
+            background-color: var(--medium-grey);
+            border: 1px solid var(--medium-blue);
             padding: 5px 10px;
-            z-index: 4;
-            pointer-events: auto;
+            border-radius: 5px;
+            color: var(--text-light);
+            cursor: pointer;
+            transition: all 0.3s;
         }
+
+        .view-mode-toggle:hover {
+            border-color: var(--accent-blue);
+            color: var(--text-highlight);
+        }
+
+        .view-mode-toggle i {
+            margin-right: 5px;
+        }
+
+        /* Zoom controls */
+        .zoom-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px 10px;
+            background-color: var(--medium-grey);
+            border-radius: 20px;
+            margin-bottom: 10px;
+            border: 1px solid var(--medium-blue);
+        }
+
         .zoom-btn {
-            width: 28px;
-            height: 28px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 4px;
-            background-color: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
-            color: white;
-            font-size: 14px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .zoom-btn:hover {
-            background-color: rgba(255,255,255,0.2);
-        }
-        .zoom-slider-container {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .zoom-level {
-            min-width: 45px;
-            text-align: center;
-            font-size: 14px;
-            color: white;
-        }
-        .zoom-slider {
-            width: 100px;
-            cursor: pointer;
-        }
-        
-        /* Thread styles */
-        #threadContainer {
-            padding-top: 20px;
-            padding-bottom: 0;
-            transition: all 0.3s ease;
-            position: relative;
-            z-index: 20; /* Increased z-index to be higher than navigation overlays */
-            background-color: #f5f5f5;
-            pointer-events: auto;
-            margin-bottom: 60px; /* Match the height of the nav bar */
-        }
-        #threadContainer .card {
+            background-color: var(--medium-blue);
+            color: var(--text-light);
             border: none;
-        }
-        #threadContainer .card-header {
-            padding: 15px 20px;
-        }
-        #threadContainer .list-group-item {
-            border-left: none;
-            border-right: none;
-            padding: 15px;
-            transition: background-color 0.2s;
-        }
-        #threadContainer .list-group-item:first-child {
-            border-top: none;
-        }
-        #threadContainer .list-group-item:hover {
-            background-color: #f8f9fa;
-        }
-        #threadContainer .list-group-item h6 {
-            font-weight: 600;
-        }
-        #newThreadForm .card {
-            border: 1px solid #e0e0e0;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-        /* Toggle button active state */
-        #toggleThreadsBtn.active {
-            background-color: #fff;
-            color: #0d6efd;
-            border-color: #fff;
-        }
-        /* Update thread container to ensure it doesn't overflow */
-        .container.mt-5#threadContainer {
-            margin-bottom: 60px !important; /* Ensure this overrides other styles */
-            padding-bottom: 20px;
-        }
-        /* Add styling for the page tracker in the bottom navigation */
-        .bottom-page-tracker {
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
             display: flex;
             align-items: center;
             justify-content: center;
+            margin: 0 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .zoom-btn:hover {
+            background-color: var(--accent-blue);
             color: white;
-            font-size: 0.85rem;
-            border-left: 1px solid rgba(255, 255, 255, 0.2);
-            border-right: 1px solid rgba(255, 255, 255, 0.2);
-            background-color: #6c757d; /* Grey background as requested */
-            min-width: 100px;
-            text-align: center;
-            font-weight: 500;
+            transform: scale(1.1);
         }
-        /* Keep the buttons flexible but ensure page tracker has space */
-        .chapter-navigation.mt-4.mb-5 button {
-            flex: 2;
+
+        .zoom-level {
+            margin: 0 10px;
+            font-size: 0.9rem;
+            color: var(--text-light);
         }
-        .chapter-navigation.mt-4.mb-5 .bottom-page-tracker {
-            flex: 1;
-        }
-        /* Ensure the top page tracker doesn't interfere */
-        #pageTracker {
-            display: none !important;
-        }
-        /* Show page tracker only in page mode by default */
-        .scrolling-mode .bottom-page-tracker {
+
+        /* Page by page mode */
+        .page-by-page-mode .comic-page {
             display: none;
+            margin: 0 auto;
+            max-height: 70vh;
+            width: auto;
+            object-fit: contain;
         }
-        .page-by-page-mode .bottom-page-tracker {
+
+        .page-by-page-mode .comic-page.active {
+            display: block;
+        }
+
+        .page-by-page-container {
+            position: relative;
+            min-height: 70vh;
             display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Thread container styles */
+        .thread-container {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: var(--medium-grey);
+            border-radius: 10px;
+            border: 1px solid var(--medium-blue);
+        }
+
+        .thread-card {
+            margin-bottom: 20px;
+            background-color: var(--light-grey);
+            border: 1px solid var(--medium-blue);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            background-color: var(--dark-blue);
+            color: var(--text-highlight);
+            font-weight: bold;
+            padding: 15px;
+            border-bottom: 1px solid var(--medium-blue);
+        }
+
+        .list-group-item {
+            background-color: var(--light-grey);
+            border-color: var(--medium-blue);
+            color: var(--text-light);
+            padding: 15px;
+        }
+
+        .comment-author {
+            font-weight: bold;
+            color: var(--text-highlight);
+            margin-right: 10px;
+        }
+
+        .comment-date {
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+
+        .comment-content {
+            margin-top: 10px;
+        }
+
+        .comment-form {
+            display: flex;
+            margin-top: 20px;
+        }
+
+        .comment-form .form-control {
+            flex: 1;
+            background-color: var(--light-grey);
+            border: 1px solid var(--medium-blue);
+            color: var(--text-light);
+            border-radius: 5px 0 0 5px;
+        }
+
+        .comment-form .btn {
+            border-radius: 0 5px 5px 0;
+        }
+
+        .bottom-page-tracker {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: var(--medium-grey);
+            color: var(--text-light);
+            padding: 8px 15px;
+            border-radius: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--medium-blue);
+            display: flex;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .bottom-page-tracker-page {
+            margin: 0 5px;
+            font-weight: bold;
+            color: var(--text-highlight);
+        }
+
+        .bottom-tracker-btn {
+            background-color: transparent;
+            border: none;
+            color: var(--text-light);
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .bottom-tracker-btn:hover {
+            background-color: var(--medium-blue);
+            color: var(--text-highlight);
+        }
+
+        /* Toggle comment section button */
+        .toggle-comments-button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            text-align: center;
+            background-color: var(--medium-grey);
+            color: var(--text-light);
+            border: 1px solid var(--medium-blue);
+            border-radius: 5px;
+            margin-top: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .toggle-comments-button:hover {
+            background-color: var(--medium-blue);
+            color: var(--text-highlight);
+        }
+
+        .toggle-comments-button.active {
+            background-color: var(--highlight-blue);
+            color: white;
+            border-color: var(--highlight-blue);
+        }
+
+        .toggle-comments-button i {
+            margin-right: 8px;
+            transition: transform 0.3s;
+        }
+
+        .toggle-comments-button.active i {
+            transform: rotate(180deg);
         }
     </style>
 </head>
 <body>
-    <nav class="reader-navbar">
+    <nav class="navbar">
         <div class="container-fluid">
             <div class="row align-items-center">
                 <div class="col-auto">

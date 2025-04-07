@@ -4,17 +4,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shop</title>
+    <title>Shop Admin</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
 
 
     <style>
+        :root {
+            --deep-grey: #1A1A1A; /* Dark grey instead of black */
+            --medium-grey: #242424; /* Medium grey for backgrounds */
+            --light-grey: #2D2D2D; /* Lighter grey for elements */
+            --dark-blue: #051937;
+            --medium-blue: #0B3366;
+            --light-blue: #0D47A1;
+            --highlight-blue: #2979FF;
+            --accent-blue: #00B0FF;
+            --text-light: #e0e1dd;
+            --text-highlight: #82E9FF;
+            --glow-effect: 0 0 10px rgba(0, 176, 255, 0.6);
+        }
+
+        body {
+            background-color: var(--deep-grey);
+            color: var(--text-light);
+            background-image: linear-gradient(to bottom, var(--deep-grey) 90%, var(--dark-blue));
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background-color: var(--deep-grey) !important;
+            box-shadow: 0 2px 15px rgba(0, 176, 255, 0.2);
+            border-bottom: 1px solid var(--accent-blue);
+        }
+
         .product-image {
             width: 100%;
             height: 250px;
             object-fit: contain;
+            border: 3px solid var(--dark-blue);
+            padding: 10px;
+            background-color: rgba(36, 36, 36, 0.7);
+            transition: transform 0.3s;
+            border-radius: 8px;
+        }
+
+        .card:hover .product-image {
+            transform: scale(1.05);
         }
 
         /* Loading spinner styling */
@@ -23,7 +60,7 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background-color: rgba(0, 0, 0, 0.5);
+            background-color: rgba(26, 26, 26, 0.9);
             color: white;
             position: fixed;
             top: 0;
@@ -32,10 +69,257 @@
             z-index: 9999;
         }
 
-
         .modal-body {
             max-height: 400px;
             overflow-y: auto;
+        }
+        
+        /* Card styling */
+        .card {
+            background-color: var(--medium-grey);
+            border: 1px solid var(--medium-blue);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+            transition: transform 0.3s, box-shadow 0.3s;
+            margin-bottom: 25px;
+            border-radius: 10px;
+            overflow: hidden;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 176, 255, 0.3);
+            border-color: var(--accent-blue);
+        }
+
+        .card-body {
+            color: var(--text-light);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background-color: var(--medium-grey);
+        }
+
+        .card-title {
+            color: var(--text-highlight);
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+        }
+
+        .card-text {
+            color: var(--text-light);
+            margin-bottom: 10px;
+        }
+        
+        /* Button styling */
+        .btn-primary {
+            background-color: var(--highlight-blue);
+            border-color: var(--highlight-blue);
+            transition: all 0.3s;
+            border-radius: 6px;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-blue);
+            border-color: var(--accent-blue);
+            box-shadow: var(--glow-effect);
+            transform: translateY(-2px);
+        }
+        
+        .btn-success {
+            background-color: #038C65;
+            border-color: #038C65;
+            transition: all 0.3s;
+        }
+        
+        .btn-success:hover {
+            background-color: #03A678;
+            border-color: #03A678;
+            box-shadow: 0 0 10px rgba(3, 166, 120, 0.6);
+            transform: translateY(-2px);
+        }
+        
+        /* Container styling */
+        .container {
+            background-color: rgba(36, 36, 36, 0.7);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* Table styling */
+        .table {
+            color: var(--text-light);
+            border-color: var(--medium-blue);
+        }
+        
+        .table-bordered {
+            border: 1px solid var(--medium-blue);
+        }
+        
+        .table-striped tbody tr:nth-of-type(odd) {
+            background-color: rgba(11, 51, 102, 0.3);
+        }
+        
+        .table th {
+            background-color: var(--dark-blue);
+            color: var(--text-highlight);
+            border-bottom: 2px solid var(--accent-blue);
+        }
+        
+        /* Form styling */
+        input[type="number"] {
+            background-color: var(--medium-grey);
+            border: 1px solid var(--medium-blue);
+            color: var(--text-light);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        
+        input[type="number"]:focus {
+            border-color: var(--accent-blue);
+            box-shadow: var(--glow-effect);
+            outline: none;
+        }
+        
+        .form-label {
+            color: var(--text-highlight);
+            font-weight: 600;
+        }
+        
+        /* Header styling */
+        .header-section {
+            text-align: center;
+            padding: 40px 0;
+            position: relative;
+            background-color: var(--deep-grey);
+        }
+        
+        .header-title {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+            color: var(--text-highlight);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-weight: 800;
+            position: relative;
+            display: inline-block;
+            text-shadow: 0 0 10px rgba(0, 176, 255, 0.4);
+        }
+        
+        /* Available Comics Header Styling */
+        .available-comics-header {
+            position: relative;
+            padding: 30px 0;
+            text-align: center;
+            margin-bottom: 0;
+            background: linear-gradient(90deg, transparent 0%, var(--dark-blue) 30%, var(--dark-blue) 70%, transparent 100%);
+            overflow: hidden;
+        }
+        
+        .available-comics-header h1 {
+            font-size: 3.5rem;
+            font-weight: 900;
+            color: var(--text-highlight);
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            margin: 0;
+            text-shadow: 0 0 15px rgba(0, 176, 255, 0.5);
+            position: relative;
+            z-index: 2;
+        }
+        
+        .available-comics-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(0, 176, 255, 0.2) 0%, transparent 70%);
+            z-index: 1;
+        }
+        
+        .available-comics-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent 0%, var(--accent-blue) 30%, var(--accent-blue) 70%, transparent 100%);
+            z-index: 1;
+        }
+        
+        .header-container {
+            padding: 0;
+            border-radius: 0;
+            margin-top: 0;
+            overflow: hidden;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--deep-grey); 
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--highlight-blue); 
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-blue); 
+        }
+        
+        /* Animation effects */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+        
+        /* Comic-themed decorative elements */
+        .comic-decoration {
+            position: absolute;
+            background-color: var(--accent-blue);
+            opacity: 0.1;
+            border-radius: 50%;
+            z-index: 0;
+        }
+        
+        .comic-decoration-1 {
+            width: 100px;
+            height: 100px;
+            top: -20px;
+            left: 10%;
+            animation: float 8s ease-in-out infinite;
+        }
+        
+        .comic-decoration-2 {
+            width: 60px;
+            height: 60px;
+            bottom: 20px;
+            right: 15%;
+            animation: float 6s ease-in-out infinite;
+            animation-delay: 1s;
+        }
+        
+        @keyframes float {
+            0% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(10deg); }
+            100% { transform: translateY(0) rotate(0deg); }
         }
     </style>
 </head>
@@ -49,20 +333,21 @@
             </div>
         </div>
 
-        <!-- Welcome Section -->
-        <div class="container mt-3">
-            <div class="bg-light p-5 rounded text-center">
-                <h1 class="display-4">Welcome to the Admin Shop Page!</h1>
-                <p class="lead">Update stock by using the form here</p>
-                <p> You are: {{users.name}}</p>
-                <p> Points: {{users.points}}</p>
-                <hr class="my-4">
-                <p>If the book is out of stock, try out the preorder function!</p>
+        <!-- Header -->
+        <div class="container header-container mt-3 fade-in">
+            <div class="available-comics-header">
+                <div class="comic-decoration comic-decoration-1"></div>
+                <div class="comic-decoration comic-decoration-2"></div>
+                <h1>Shop Admin</h1>
+            </div>
+            <div class="header-section">
+                <p class="lead">Manage inventory and waitlist entries</p>
+                <p>Administrator: {{users.name}}</p>
             </div>
         </div>
 
         <!-- Products Section -->
-        <div class="container mt-5" v-if="!loading">
+        <div class="container mt-4" v-if="!loading">
             <div class="row">
                 <div class="col-md-4" v-for="product in products" :key="product.Id">
                     <div class="card mb-4" @click="selectProduct(product)">
@@ -71,7 +356,9 @@
                         <div class="card-body">
                             <h5 class="card-title">{{ product.comic_name }} - Volume {{ product.volume_name }}</h5>
                             <p class="card-text">Price: ${{ product.price_per_item.toFixed(2) }}</p>
-                            <p class="card-text">Stock: {{ product.quantity_in_stock }} available</p>
+                            <p class="card-text">Stock: <span :class="product.quantity_in_stock > 0 ? 'text-success' : 'text-danger'">
+                                {{ product.quantity_in_stock }} available
+                            </span></p>
 
                             <!-- Button Text based on stock availability -->
                             <button class="btn btn-primary" :disabled="product.isCooldown"
@@ -86,9 +373,11 @@
 
         <!-- Waitlist Entries Section -->
         <div class="container mt-5">
-            <h2>Current Waitlist Entries</h2>
+            <h2 class="text-center mb-4" style="color: var(--text-highlight); text-transform: uppercase; letter-spacing: 1px;">
+                <i class="bi bi-list-check me-2"></i>Current Waitlist Entries
+            </h2>
             <div v-if="waitlist.length === 0">
-                <p>No waitlist entries yet.</p>
+                <p class="text-center">No waitlist entries yet.</p>
             </div>
             <div v-else>
                 <table class="table table-bordered table-striped">
@@ -114,38 +403,41 @@
             </div>
         </div>
 
-
-
-        <!-- Stock Update Form (For Demo Purposes)-->
+        <!-- Stock Update Form -->
         <div class="container mt-5">
-            <h2 v-if="selectedProduct">Update Stock for {{ selectedProduct.comic_name }} - Volume {{
-                selectedProduct.volume_name }}</h2>
-            <form @submit.prevent="updateStock">
-                <div class="mb-3">
-                    <label for="stock" class="form-label">New Stock Quantity</label>
-                    <input type="number" id="stock" class="form-control" v-model="newStock" min="0" required>
+            <div class="card">
+                <div class="card-body">
+                    <h2 v-if="selectedProduct" class="card-title">Update Stock for {{ selectedProduct.comic_name }} - Volume {{
+                        selectedProduct.volume_name }}</h2>
+                    <h2 v-else class="card-title">Update Stock</h2>
+                    <form @submit.prevent="updateStock">
+                        <div class="mb-3">
+                            <label for="stock" class="form-label">New Stock Quantity</label>
+                            <input type="number" id="stock" class="form-control" v-model="newStock" min="0" required>
+                        </div>
+                        <button type="submit" class="btn btn-success" :disabled="selectedProduct === null">
+                            <i class="bi bi-check-circle me-2"></i>Update Stock
+                        </button>
+                    </form>
                 </div>
-                <button type="submit" class="btn btn-success" :disabled="selectedProduct === null">Update Stock</button>
-            </form>
+            </div>
         </div>
-        <div class="container mt-5">
-            <button class="btn btn-primary" @click="updateWaitlist">
-                Click here to update waitlist
+        
+        <!-- Waitlist Update Button -->
+        <div class="container mt-4 mb-5 text-center">
+            <button class="btn btn-primary btn-lg" @click="updateWaitlist">
+                <i class="bi bi-arrow-repeat me-2"></i>Update Waitlist
             </button>
+            <div class="mt-3">
+                <a href="shop.html" class="btn btn-outline-light">
+                    <i class="bi bi-arrow-left me-2"></i>Return to Shop
+                </a>
+            </div>
         </div>
     </div>
 
-
-
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-
-    <script>
-
-    </script>
-
-
 
     <script>
         const app = Vue.createApp({
@@ -221,6 +513,7 @@
                         .then(response => response.json())
                         .then(data => {
                             console.log('Waitlist updated', data);
+                            alert('Waitlist processing started successfully!');
                         })
                         .catch(error => {
                             console.error('Error updating waitlist', error);

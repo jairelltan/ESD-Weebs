@@ -11,45 +11,393 @@
     <!-- Stripe.js -->
     <script src="https://js.stripe.com/v3/"></script>
     <style>
-        .plan-card {
-            transition: transform 0.3s;
-            cursor: pointer;
+        :root {
+            --deep-grey: #1A1A1A; /* Dark grey instead of black */
+            --medium-grey: #242424; /* Medium grey for backgrounds */
+            --light-grey: #2D2D2D; /* Lighter grey for elements */
+            --dark-blue: #051937;
+            --medium-blue: #0B3366;
+            --light-blue: #0D47A1;
+            --highlight-blue: #2979FF;
+            --accent-blue: #00B0FF;
+            --text-light: #e0e1dd;
+            --text-highlight: #82E9FF;
+            --glow-effect: 0 0 10px rgba(0, 176, 255, 0.6);
         }
+
+        body {
+            background-color: var(--deep-grey);
+            color: var(--text-light);
+            background-image: linear-gradient(to bottom, var(--deep-grey) 90%, var(--dark-blue));
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background-color: var(--deep-grey) !important;
+            box-shadow: 0 2px 15px rgba(0, 176, 255, 0.2);
+            border-bottom: 1px solid var(--accent-blue);
+            margin-bottom: 30px;
+        }
+
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--text-highlight) !important;
+            letter-spacing: 1px;
+        }
+
+        h1, h2, h3 {
+            color: var(--text-highlight);
+            text-shadow: 0 0 8px rgba(0, 176, 255, 0.3);
+        }
+
+        .plan-card {
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+            background-color: #f8f9fa;
+            border: 1px solid var(--medium-blue);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+            color: #333;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
         .plan-card:hover {
             transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 176, 255, 0.3);
+            border-color: var(--accent-blue);
         }
+
         .plan-card.selected {
-            border: 2px solid #0d6efd;
-            box-shadow: 0 0 15px rgba(13, 110, 253, 0.3);
+            border: 2px solid var(--accent-blue);
+            box-shadow: 0 0 20px rgba(0, 176, 255, 0.5);
+            position: relative;
         }
+
+        .plan-card.selected::after {
+            content: '✓';
+            position: absolute;
+            top: -15px;
+            right: -15px;
+            width: 40px;
+            height: 40px;
+            background-color: #198754;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            box-shadow: var(--glow-effect);
+        }
+
         .feature-list {
             list-style: none;
             padding-left: 0;
         }
+
         .feature-list li {
-            margin-bottom: 8px;
+            margin-bottom: 12px;
+            position: relative;
+            padding-left: 28px;
         }
+
         .feature-list li i {
             color: #198754;
             margin-right: 8px;
+            position: absolute;
+            left: 0;
+            top: 2px;
         }
+
         #payment-form {
             max-width: 500px;
             margin: 0 auto;
+            background-color: var(--medium-grey);
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--medium-blue);
         }
+
         #payment-element {
             margin-bottom: 24px;
+            background-color: white;
+            border-color: var(--highlight-blue);
+            padding: 15px;
+            border-radius: 5px;
         }
+
         .notification {
             position: fixed;
             top: 20px;
             right: 20px;
-            padding: 15px;
-            background-color: #198754;
+            padding: 15px 25px;
+            background-color: var(--highlight-blue);
             color: white;
-            border-radius: 5px;
+            border-radius: 8px;
             display: none;
             z-index: 1000;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            font-weight: bold;
+            border: 1px solid var(--accent-blue);
+        }
+
+        .btn-primary {
+            background-color: var(--highlight-blue);
+            border-color: var(--highlight-blue);
+            transition: all 0.3s;
+            padding: 10px 25px;
+            font-weight: bold;
+            border-radius: 6px;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-blue);
+            border-color: var(--accent-blue);
+            box-shadow: var(--glow-effect);
+            transform: translateY(-3px);
+        }
+        
+        .btn-outline-light {
+            transition: all 0.3s;
+        }
+        
+        .btn-outline-light:hover {
+            background-color: var(--highlight-blue);
+            border-color: var(--highlight-blue);
+            box-shadow: var(--glow-effect);
+        }
+
+        .pricing {
+            position: relative;
+            padding: 20px 0;
+        }
+
+        .pricing h2 {
+            font-size: 2.5rem;
+            margin-bottom: 0;
+            color: var(--text-highlight);
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(0, 176, 255, 0.3);
+        }
+
+        .pricing::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 2px;
+            background-color: var(--accent-blue);
+        }
+
+        .pricing::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 2px;
+            background-color: var(--accent-blue);
+        }
+
+        .card-title {
+            position: relative;
+            display: inline-block;
+            padding-bottom: 10px;
+            color: #333;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .card-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: var(--accent-blue);
+        }
+
+        .text-muted {
+            color: #6c757d !important;
+        }
+
+        .lead {
+            color: var(--text-highlight);
+        }
+
+        /* Container styling */
+        .container {
+            background-color: rgba(36, 36, 36, 0.7);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--deep-grey); 
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--highlight-blue); 
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-blue); 
+        }
+
+        /* Background animation */
+        .bg-light {
+            background-color: var(--deep-grey) !important;
+        }
+
+        .py-5 {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Subtle animation for selected plan */
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 176, 255, 0.4); }
+            70% { box-shadow: 0 0 0 15px rgba(0, 176, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 176, 255, 0); }
+        }
+
+        .plan-card.selected {
+            animation: pulse 2s infinite;
+        }
+
+        .spinner-border {
+            color: var(--highlight-blue) !important;
+        }
+
+        /* Smooth hover transitions for card bodies */
+        .card-body {
+            transition: all 0.3s ease;
+            padding: 30px 20px;
+            background-color: #f8f9fa;
+        }
+
+        .plan-card:hover .card-body {
+            transform: translateY(-5px);
+        }
+        
+        /* Header styling */
+        .available-comics-header {
+            position: relative;
+            padding: 30px 0;
+            text-align: center;
+            margin-bottom: 0;
+            background: linear-gradient(90deg, transparent 0%, var(--dark-blue) 30%, var(--dark-blue) 70%, transparent 100%);
+            overflow: hidden;
+        }
+        
+        .available-comics-header h1 {
+            font-size: 3.5rem;
+            font-weight: 900;
+            color: var(--text-highlight);
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            margin: 0;
+            text-shadow: 0 0 15px rgba(0, 176, 255, 0.5);
+            position: relative;
+            z-index: 2;
+        }
+        
+        .available-comics-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(0, 176, 255, 0.2) 0%, transparent 70%);
+            z-index: 1;
+        }
+        
+        .available-comics-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent 0%, var(--accent-blue) 30%, var(--accent-blue) 70%, transparent 100%);
+            z-index: 1;
+        }
+        
+        .header-container {
+            padding: 0;
+            border-radius: 0;
+            margin-top: 0;
+            overflow: hidden;
+        }
+        
+        /* Animation effects */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+        
+        /* Comic-themed decorative elements */
+        .comic-decoration {
+            position: absolute;
+            background-color: var(--accent-blue);
+            opacity: 0.1;
+            border-radius: 50%;
+            z-index: 0;
+        }
+        
+        .comic-decoration-1 {
+            width: 100px;
+            height: 100px;
+            top: -20px;
+            left: 10%;
+            animation: float 8s ease-in-out infinite;
+        }
+        
+        .comic-decoration-2 {
+            width: 60px;
+            height: 60px;
+            bottom: 20px;
+            right: 15%;
+            animation: float 6s ease-in-out infinite;
+            animation-delay: 1s;
+        }
+        
+        @keyframes float {
+            0% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(10deg); }
+            100% { transform: translateY(0) rotate(0deg); }
+        }
+        
+        /* Price tag styling for plans */
+        .price-display {
+            margin-bottom: 5px;
+            color: #333;
+        }
+        
+        .price-display .amount {
+            font-size: 2.5rem;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -57,13 +405,29 @@
     <div id="app">
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
             <div class="container">
-                <a class="navbar-brand" href="comics.html">Comic Collection</a>
+                <a class="navbar-brand" href="comics.html">
+                    <i class="fas fa-book-open me-2" style="color: var(--accent-blue);"></i>
+                    <span style="background: linear-gradient(to right, var(--text-highlight), var(--accent-blue)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Comic Collection</span>
+                </a>
+                <div>
+                    <a href="shop.html" class="btn btn-outline-light">
+                        <i class="fas fa-store me-2"></i>Back to Shop
+                    </a>
+                </div>
             </div>
         </nav>
 
-        <div class="container py-5">
+        <div class="container header-container">
+            <div class="available-comics-header">
+                <div class="comic-decoration comic-decoration-1"></div>
+                <div class="comic-decoration comic-decoration-2"></div>
+                <h1>Premium Plans</h1>
+            </div>
+        </div>
+
+        <div class="container py-5 fade-in">
             <div v-if="!showPaymentForm">
-                <h1 class="text-center mb-5">Choose Your Premium Plan</h1>
+                <h2 class="text-center mb-5">Choose Your Subscription</h2>
                 
                 <div class="row justify-content-center g-4">
                     <div v-for="plan in plans" :key="plan.plan_id" class="col-md-4">
@@ -73,12 +437,14 @@
                             <div class="card-body text-center">
                                 <h3 class="card-title">{{ plan.plan_name }}</h3>
                                 <div class="pricing my-4">
-                                    <h2 class="mb-0">${{ plan.price }}</h2>
+                                    <div class="price-display">
+                                        <span class="amount">${{ plan.price }}</span>
+                                    </div>
                                     <p class="text-muted">per {{ plan.duration.toLowerCase() }}</p>
                                 </div>
                                 <ul class="feature-list">
                                     <li v-for="feature in plan.features.split(', ')" :key="feature">
-                                        <i class="fas fa-check"></i> {{ feature }}
+                                        <i class="fas fa-check-circle"></i> {{ feature }}
                                     </li>
                                 </ul>
                             </div>
@@ -90,7 +456,7 @@
                     <button class="btn btn-primary btn-lg px-5"
                             :disabled="!selectedPlan"
                             @click="proceedToCheckout">
-                        <i class="fas fa-shopping-cart me-2"></i>
+                        <i class="fas fa-credit-card me-2"></i>
                         Proceed to Checkout
                     </button>
                 </div>
@@ -103,7 +469,7 @@
                     <p class="lead">${{ selectedPlan.price }}</p>
                 </div>
                 <form id="payment-form">
-                    <div id="payment-element"></div>
+                    <div id="payment-element" style="background-color: white;"></div>
                     <button class="btn btn-primary w-100" id="submit" :disabled="isProcessing">
                         <span v-if="isProcessing">
                             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
@@ -184,7 +550,14 @@
                             this.elements = stripe.elements({
                                 clientSecret: client_secret,
                                 appearance: {
-                                    theme: 'stripe'
+                                    theme: 'stripe',
+                                    variables: {
+                                        colorPrimary: '#2979FF',
+                                        colorBackground: '#FFFFFF',
+                                        colorText: '#333333',
+                                        colorDanger: '#fa755a',
+                                        fontFamily: 'Segoe UI, sans-serif',
+                                    }
                                 }
                             });
 
