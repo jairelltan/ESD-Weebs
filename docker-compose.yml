@@ -60,8 +60,8 @@ services:
       MYSQL_USER: root
       MYSQL_PASSWORD: root_password
       MYSQL_PORT: 3306
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_PORT: 5672
+      RABBITMQ_HOST: esd-weebs-rabbitmq
+      RABBITMQ_PORT: 5673  
     networks:
       - esd-network
 
