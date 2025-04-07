@@ -1,6 +1,6 @@
 # ESD-Weebs Comic Reading Platform
 
-A microservice-based web application for reading comics, with features including user management, comic browsing, chapter management, and more.
+A microservice-based web application for reading comics, with features including comic browsing, chapter management, purchasing of physical comic books to support comic artists and more.
 
 ## Architecture
 
@@ -14,12 +14,15 @@ This application follows a microservice architecture with multiple Flask-based P
 - Comments and threads services
 - Various composite services for complex operations
 
+RabbitMQ has also been implemented to enable a First-Come-First-Serve queue for the waitlist, ensuring that people who waitlist a product first will automically have that item added to their cart first when the product is in stock.
+
 ## Docker Setup
 
 This project has been dockerized for easy deployment. The setup includes:
 
 1. A MySQL database container for data storage
 2. An application container running all the microservices
+3. A rabbitMQ container (hosted on port 15673 and 5673 for the GUI manager and service respectively) to allow rabbitMQ
 
 ### Requirements
 
@@ -30,13 +33,13 @@ This project has been dockerized for easy deployment. The setup includes:
 
 1. Clone the repository:
    ```
-   git clone <repository-url>
+   git clone https://github.com/jairelltan/ESD-Weebs
    cd ESD-Weebs
    ```
 
 2. Build and start the containers:
    ```
-   docker-compose up -d
+   docker-compose up --build
    ```
 
 3. To reset the database:
@@ -95,6 +98,8 @@ db_config = {
   docker exec -it esd-weebs-app pip install <package-name>
   ```
 - **WSL conflicts:** If you're using WSL, be aware it might use the same ports. Consider using 127.0.0.1 instead of localhost for direct connections
+- **Important!!!!** When building the container, if you receive the error `exer /use/local/bin/docker-entrypoint.sh: no such file or directory`,
+one possible fix is to change your End Of Life Sequence from CRLF to LF. If you are using Visual Code, this can be found at the bottom right of the UI right beside the 'Language Mode'. 
 
 ## Adding New Comics
 
