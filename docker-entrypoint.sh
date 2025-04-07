@@ -140,6 +140,17 @@ for port in $(seq 5000 5025); do
     fi
 done
 
+# Start Nginx web server
+echo "Starting Nginx web server on port 8080..."
+service nginx start
+# Verify Nginx is running
+if service nginx status > /dev/null 2>&1; then
+    echo "Nginx started successfully"
+else
+    echo "Warning: Nginx failed to start properly. Check logs for details."
+    nginx -t
+fi
+
 # Import comic data
 echo ""
 echo "=================================================================="
@@ -163,7 +174,9 @@ echo "=================================================================="
 echo ""
 echo "=================================================================="
 echo "Your ESD-Weebs microservices are now running!"
-echo "You can access the services at:"
+echo "You can access the web interface at: http://localhost:8080"
+echo ""
+echo "API services are available at:"
 echo "  - User API: http://localhost:5000"
 echo "  - Comic API: http://localhost:5001 (if available)"
 echo "  - Chapter API: http://localhost:5005 (if available)"

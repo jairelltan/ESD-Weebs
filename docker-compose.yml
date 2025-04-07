@@ -54,13 +54,14 @@ services:
         condition: service_healthy  # Ensure MySQL is healthy before app starts
     ports:
       - "5000-5025:5000-5025"
+      - "8080:8080"
     environment:
       MYSQL_HOST: db
       MYSQL_USER: root
       MYSQL_PASSWORD: root_password
       MYSQL_PORT: 3306
-      RABBITMQ_HOST: esd-weebs-rabbitmq
-      RABBITMQ_PORT: 5673  
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
     networks:
       - esd-network
 
