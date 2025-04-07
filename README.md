@@ -143,6 +143,7 @@ This system consists of 25 microservices:
 ## Atomic Services
 
 ### 1. User Service (Port: 5000)
+**Documentation Link** https://docs.google.com/document/d/1Lbc3l33YEX3n_IBJ10AZ_d1Bu-ziOYd6u4M-HrexDVA/edit?tab=t.0#heading=h.qxh2timmpdao 
 **Type**: Atomic
 **Database**: `user_db`
 **Database Attributes**: 
@@ -191,7 +192,9 @@ Description – Cannot connect to user database
   "error": "Failed to connect to database"
 }
 
-- GET `/user/{user_id}` - Get specific user
+- GET `/user/{user_id}` - Get specific user based on user_id
+
+
 - PUT `/user/{user_id}` - Update user details
 - PUT `/user/{user_id}/points` - Update points
 - PUT `/user/{user_id}/status` - Update subscription status
