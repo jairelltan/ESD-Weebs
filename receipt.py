@@ -130,8 +130,7 @@ def get_user_receipts(user_id):
                 "receipt_date": receipt[6].strftime('%Y-%m-%d %H:%M:%S'),
                 "subscriber_status": receipt[7],
                 "billing_address": receipt[8],
-                "GST_amount": float(receipt[9]),
-                "total_amount": float(receipt[10])
+                "total_amount": float(receipt[9])
             })
         
         cursor.close()
@@ -179,8 +178,7 @@ def get_receipt(receipt_id):
             "receipt_date": receipt[6].strftime('%Y-%m-%d %H:%M:%S'),
             "subscriber_status": receipt[7],
             "billing_address": receipt[8],
-            "GST_amount": float(receipt[9]),
-            "total_amount": float(receipt[10])
+            "total_amount": float(receipt[9])
         }
         
         cursor.close()
@@ -228,8 +226,7 @@ def get_receipt_by_transaction(transaction_id):
             "receipt_date": receipt[6].strftime('%Y-%m-%d %H:%M:%S'),
             "subscriber_status": receipt[7],
             "billing_address": receipt[8],
-            "GST_amount": float(receipt[9]),
-            "total_amount": float(receipt[10])
+            "total_amount": float(receipt[9])
         }
         
         cursor.close()

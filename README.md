@@ -140,10 +140,10 @@ This system consists of 25 microservices:
 - 11 Composite Services
 - 1 External Integration
 
+**Documentation Link** https://docs.google.com/document/d/1Lbc3l33YEX3n_IBJ10AZ_d1Bu-ziOYd6u4M-HrexDVA/edit?tab=t.0#heading=h.qxh2timmpdao 
 ## Atomic Services
 
 ### 1. User Service (Port: 5000)
-**Documentation Link** https://docs.google.com/document/d/1Lbc3l33YEX3n_IBJ10AZ_d1Bu-ziOYd6u4M-HrexDVA/edit?tab=t.0#heading=h.qxh2timmpdao 
 **Type**: Atomic
 **Database**: `user_db`
 **Database Attributes**: 
@@ -163,7 +163,6 @@ Endpoints:
 - PUT `/user/{user_id}/points` - Update points
 
 ### 2. Comic Service (Port: 5001)
-**Documentation Link** https://docs.google.com/document/d/1Lbc3l33YEX3n_IBJ10AZ_d1Bu-ziOYd6u4M-HrexDVA/edit?tab=t.0
 **Type**: Atomic
 **Database**: `comic_db`
 **Database Attributes**
@@ -185,7 +184,6 @@ Endpoints:
 - GET `/comic/{comic_id}/image` - Get cover
 
 ### 3. Waitlist Service (Port: 5003)
-**Documenation Link**: https://docs.google.com/document/d/1Lbc3l33YEX3n_IBJ10AZ_d1Bu-ziOYd6u4M-HrexDVA/edit?tab=t.0 
 **Type**: Atomic
 **Database**: `waitlist_db`
 **Database Attributes**
@@ -207,13 +205,19 @@ Endpoints:
 ### 4. Premium Plan Service (Port: 5004)
 **Type**: Atomic
 **Database**: `premium_plan_db`
+**Database Attributes**
+plan_id | int			
+plan_name | varchar(255)		
+description | text	
+price | decimal(10,2)		
+duration | enum('MONTHLY', 'QUARTERLY', 'YEARLY')	
+features | text
 **Description**: Manages subscription plans
 
 Endpoints:
 - GET `/premium_plan/{plan_id}` - Get plan details
 
 ### 5. Chapter Service (Port: 5005)
-**Documentation Link** https://docs.google.com/document/d/1Lbc3l33YEX3n_IBJ10AZ_d1Bu-ziOYd6u4M-HrexDVA/edit?tab=t.0
 **Type**: Atomic
 **Database** `chapter_db`
 **Database Attributes**
