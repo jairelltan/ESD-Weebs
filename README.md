@@ -269,31 +269,56 @@ Endpoints:
 
 Endpoints:
 - POST `/notification` - Create notification
-- GET `/notification/{user_id}` - Get user notifications
+- GET `/notification/user/{user_id}` - Get user notifications
+- POST `/notification/bookpayment` - Create Notification (book payment based)
+- GET `/notification/<int:notification_id>` - Get notification based on notification id
 
 ### 8. Cart Service (Port: 5008)
 **Type**: Atomic
 **Database**: `cart_db`
-**Description**: Manages shopping cart
+**Database Attributes**
+    id | INT 
+    user_id | INT
+    username | VARCHAR(255)
+    comic_id | INT
+    comic_name | VARCHAR(255)
+    comic_volume | VARCHAR(255)
+    price_per_item | DECIMAL(10,2)
+    quantity | INT
+**Description**: Manages cart for users
 
 Endpoints:
 - GET `/cart/{user_id}` - Get user's cart
-- POST `/cart` - Add/update cart item
+- GET `/cart/specificentry/{id}` – Get specific cart item via cart id
+POST `/cart` – Add or update quantity of item item to cart
 - DELETE `/cart/{id}` - Delete cart item
+- DELETE `/cart/user/{user_id}` – Delete all cart entries for a specific user
 
 ### 9. Page Service (Port: 5013)
 **Type**: Atomic
 **Database**: `page_db`
+**Database Attributes**
+    page_id | INT 
+    comic_id | INT
+    chapter_id | INT
+    page_number | INT
+    page_image | LONGBLOB
+    UNIQUE KEY unique_page | (comic_id, chapter_id, page_number)
 **Description**: Manages comic pages
 
 Endpoints:
 - GET `/api/pages/chapter/{chapter_id}` - Get chapter pages
+- GET `/api/pages/chapter/int:chapter_id/page/int:page_number`- Get a specific page image
 - POST `/api/pages/upload` - Upload page
-- DELETE `/api/pages/chapter/{chapter_id}/page/{page_number}` - Delete page
 
 ### 10. History Service (Port: 5014)
 **Type**: Atomic
 **Database**: `history_db`
+**Database Attributes**
+    user_id | INT
+    chapter_id | INT
+    created_at | TIMESTAMP
+    PRIMARY KEY | (user_id, chapter_id)
 **Description**: Manages reading history
 
 Endpoints:
