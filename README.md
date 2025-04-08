@@ -371,6 +371,9 @@ Endpoints:
 
 ## Atomic External Services
 
+### 1. Stripeapi.py (Port 5017)
+**Type**: Atomic
+**Description**: Manages stripepayment intent
 
 
 
