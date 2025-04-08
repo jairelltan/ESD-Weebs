@@ -159,13 +159,21 @@ This system consists of 25 microservices:
 Endpoints:
 - GET `/user` - Get all users' information in the user DB
 - GET `/user/{user_id}` - Get specific user based on user_id
-- PUT `/user/{user_id}` - Update user details
+- PUT `/user/{user_id}` - Update user details (points or/and status)
 - PUT `/user/{user_id}/points` - Update points
-- PUT `/user/{user_id}/status` - Update subscription status
 
 ### 2. Comic Service (Port: 5001)
+**Documentation Link** https://docs.google.com/document/d/1Lbc3l33YEX3n_IBJ10AZ_d1Bu-ziOYd6u4M-HrexDVA/edit?tab=t.0
 **Type**: Atomic
 **Database**: `comic_db`
+**Database Attributes**
+	comic_id | int (Primary Key)
+	comic_name | varchar(255)
+	author | varchar(255)
+	genre | varchar(255)	
+	status | enum('ongoing', 'completed', 'hiatus')		
+	description | text
+	comic_art | blob
 **Description**: Manages comic metadata
 
 Endpoints:
@@ -173,13 +181,22 @@ Endpoints:
 - GET `/comic/{comic_id}` - Get specific comic
 - POST `/comic` - Create comic
 - PUT `/comic/{comic_id}` - Update comic
-- DELETE `/comic/{comic_id}` - Delete comic
 - POST `/comic/{comic_id}/image` - Upload cover
 - GET `/comic/{comic_id}/image` - Get cover
 
 ### 3. Waitlist Service (Port: 5003)
+**Documenation Link**: https://docs.google.com/document/d/1Lbc3l33YEX3n_IBJ10AZ_d1Bu-ziOYd6u4M-HrexDVA/edit?tab=t.0 
 **Type**: Atomic
 **Database**: `waitlist_db`
+**Database Attributes**
+id Primary | int			
+user_id | int				
+username | varchar(255)		
+comic_id | int				
+comic_name | varchar(255)		
+comic_volume | varchar(255)		
+price_per_item | decimal(10,2)		
+timestamp | datetime		 	
 **Description**: Manages waitlist entries
 
 Endpoints:
@@ -196,15 +213,22 @@ Endpoints:
 - GET `/premium_plan/{plan_id}` - Get plan details
 
 ### 5. Chapter Service (Port: 5005)
+**Documentation Link** https://docs.google.com/document/d/1Lbc3l33YEX3n_IBJ10AZ_d1Bu-ziOYd6u4M-HrexDVA/edit?tab=t.0
 **Type**: Atomic
-**Database**: `chapter_db`
-**Description**: Manages chapter information
+**Database** `chapter_db`
+**Database Attributes**
+   chapter_id | int				
+	comic_id | int				
+	chapter_number | int			
+	title	| varchar(255)	
+	release_date | date		
+*Description**: Manages chapter information
 
 Endpoints:
 - GET `/api/comics/{comic_id}/chapters` - Get comic chapters
 - GET `/api/chapters/{chapter_id}` - Get chapter
+- GET `/api/chapters/{chapter_id}/navigation` - Fetch the navigation details for a specific chapter
 - POST `/api/chapters` - Create chapter
-- DELETE `/api/chapters/{chapter_id}` - Delete chapter
 
 ### 6. Receipt Service (Port: 5006)
 **Type**: Atomic
