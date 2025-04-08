@@ -229,53 +229,6 @@ def update_points(user_id):
         "points": updated_points
     })
 
-# API to update status for a user
-@app.route('/user/<int:user_id>/status', methods=['PUT'])
-def update_status(user_id):
-    # Get the data from the request (assumed to be in JSON format)
-    user_data = request.get_json()
-
-    # Validate if status is provided
-    if not user_data or "status" not in user_data:
-        return jsonify({"error": "Status not provided"}), 400
-
-    status = user_data["status"]
-
-    # Validate if status is valid (you can customize the valid statuses)
-    if status not in ["active", "inactive"]:
-        return jsonify({"error": "Status must be either 'active' or 'inactive'"}), 400
-    
-    # Connect to the database
-    conn = get_db_connection()
-    if conn is None:
-        return jsonify({"error": "Failed to connect to database"}), 500
-
-    cursor = conn.cursor()
-
-    # SQL query to update the status of the user
-    update_query = """
-        UPDATE user
-        SET status = %s
-        WHERE user_id = %s
-    """
-
-    # Execute the query
-    cursor.execute(update_query, (status, user_id))
-
-    # Commit the changes
-    conn.commit()
-
-    # Check if any row was updated
-    if cursor.rowcount == 0:
-        cursor.close()
-        conn.close()
-        return jsonify({"error": "User not found"}), 404
-
-    cursor.close()
-    conn.close()
-
-    return jsonify({"message": "Status updated successfully"})
-
 @app.route('/user/<int:user_id>', methods=['PUT'])
 def update_user(user_id):
     try:
