@@ -299,7 +299,26 @@ POST `/cart` – Add or update quantity of item item to cart
 - DELETE `/cart/{id}` - Delete cart item
 - DELETE `/cart/user/{user_id}` – Delete all cart entries for a specific user
 
-### 9. Page Service (Port: 5013)
+### 9. Comment Service (Port: 5012)
+**Type**: Atomic
+**Database**: `comments_db`
+**Database Attributes**
+    comment_id | INT 
+    thread_id | INT 
+    user_id | INT 
+    parent_id | INT
+    content | VARCHAR(1000) 
+    likes | INT 
+    status | ENUM('published', 'archived', 'deleted')
+**Description**: Manages comments
+
+Endpoints:
+- GET `/comments/thread/<int:thread_id>` - Get comments for a thread
+- GET `/comments/<int:comment_id>/replies` - Get replies for a comment
+- POST `/comment` - Post a Comment
+- POST `/comment/<int:comment_id>/like` - Like a comment
+
+### 10. Page Service (Port: 5013)
 **Type**: Atomic
 **Database**: `page_db`
 **Database Attributes**
@@ -316,7 +335,7 @@ Endpoints:
 - GET `/api/pages/chapter/int:chapter_id/page/int:page_number`- Get a specific page image
 - POST `/api/pages/upload` - Upload page
 
-### 10. History Service (Port: 5014)
+### 11. History Service (Port: 5014)
 **Type**: Atomic
 **Database**: `history_db`
 **Database Attributes**
@@ -327,19 +346,38 @@ Endpoints:
 **Description**: Manages reading history
 
 Endpoints:
-- GET `/history/{user_id}` - Get user history
-- POST `/history` - Add history entry
-- DELETE `/history/{id}` - Delete entry
+- GET `/api/history`- Get all users' reading history
+- GET `/api/history/user/<int:user_id>` - Get a user's reading history
+- POST `api/history` - Add history entry
 
-### 11. Thread Service (Port: 5015)
+### 12. Thread Service (Port: 5015)
 **Type**: Atomic
 **Database**: `thread_db`
+**Database Attributes**
+    thread_id | INT
+    chapter_id | INT
+    user_id | INT
+    title | VARCHAR(255)
+    content | TEXT
+    create_date | DATETIME
+    status | ENUM('published', 'archived', 'deleted')
+    likes | INT
+    comment_count | INT
 **Description**: Manages discussion threads
 
 Endpoints:
 - GET `/threads` - Get all threads
-- POST `/threads` - Create thread
-- GET `/threads/{thread_id}`
+- GET `/threads/chapter/<int:chapter_id>` - Get Threads by chapter
+- GET `/thread/<int:thread_id>/comments/count` - Get Comment Count for a thread
+- PUT `/thread/<int:thread_id>/comments/count` - Update thread comment count
+- POST `/thread` - Create a New Thread
+- PUT `/thread/<int:thread_id>/status` - Update thread status
+- POST `/thread/<int:thread_id>/like` - Like a thread
+
+## Atomic External Services
+
+
+
 
 ## Composite Services
 
