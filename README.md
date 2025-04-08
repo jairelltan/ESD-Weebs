@@ -40,6 +40,11 @@ This project has been dockerized for easy deployment. The setup includes:
 2. Build and start the containers:
    ```
    docker-compose up --build
+
+   *The docker will start building up the image and running the various microservices. This might take a while. 
+
+   Once everything a ready, you should see "user 'guest' authenticated and granted access to vhost"*
+
    ```
 
 3. To reset the database:
