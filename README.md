@@ -215,7 +215,8 @@ features | text
 **Description**: Manages subscription plans
 
 Endpoints:
-- GET `/premium_plan/{plan_id}` - Get plan details
+- GET `/premium_plan` - Get all plan details
+- GET `/premium_plan/{plan_id}` - Get plan details of a specific plan
 
 ### 5. Chapter Service (Port: 5005)
 **Type**: Atomic
@@ -226,7 +227,7 @@ Endpoints:
 	chapter_number | int			
 	title	| varchar(255)	
 	release_date | date		
-*Description**: Manages chapter information
+**Description** Manages chapter information
 
 Endpoints:
 - GET `/api/comics/{comic_id}/chapters` - Get comic chapters
@@ -237,14 +238,33 @@ Endpoints:
 ### 6. Receipt Service (Port: 5006)
 **Type**: Atomic
 **Database**: `receipt_db`
+**Database Attributes**
+   receipt_id | INT (Primary Key)
+   user_id | INT 
+   transaction_id | VARCHAR(255)
+   card_id | INT 
+   current_points | INT 
+   payment_method | ENUM('CREDIT_CARD', 'DEBIT_CARD')
+   receipt_date | TIMESTAMP
+   subscriber_status | VARCHAR(50)
+   billing_address | TEXT
+   amount | DECIMAL(10,2)
 **Description**: Manages transaction receipts
 
 Endpoints:
 - POST `/receipt` - Create receipt
+- GET `/receipt/user/<int:user_id>` - Get all receipts for a user
+- GET `/receipt/<int:receipt_id>` - Get specific receipt by receipt_id
+- Get `/receipt/transaction/<transaction_id>/` - Get receipt by transaction_id
 
 ### 7. Notification Service (Port: 5007)
 **Type**: Atomic
 **Database**: `notification_db`
+**Database Attributes**:
+   notification_id | INT,
+   user_id | INT,
+   description | VARCHAR(255),
+   time TIMESTAMP | DEFAULT CURRENT_TIMESTAMP  
 **Description**: Manages user notifications
 
 Endpoints:
