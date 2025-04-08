@@ -379,7 +379,8 @@ Endpoints:
 ### 1. Stripeapi.py (Port 5017)
 **Type**: Atomic
 **Description**: Manages stripepayment intent
-
+Endpoints:
+POST `/create-payment-intent` -- Handles Payment Intent
 
 
 ## Composite Services
