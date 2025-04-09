@@ -58,6 +58,7 @@ This project has been dockerized for easy deployment. The setup includes:
    - User API: http://localhost:5000
    - Comic API: http://localhost:5001
    - Various other services run on ports 5002-5025
+   - Website: http://localhost:8080
 
 
 ### Database Initialization
