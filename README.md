@@ -140,10 +140,11 @@ Note: On first container startup, the system will automatically import any comic
 # ESD-Weebs Microservices Architecture
 
 ## Overview
-This system consists of 25 microservices:
+This system consists of 23 microservices:
 - 13 Atomic Services
-- 11 Composite Services
+- 9 Composite Services
 - 1 External Integration
+- 1 Outsystems LCAP
 
 **Documentation Link** https://docs.google.com/document/d/1Lbc3l33YEX3n_IBJ10AZ_d1Bu-ziOYd6u4M-HrexDVA/edit?tab=t.0#heading=h.qxh2timmpdao 
 ## Atomic Services
@@ -382,6 +383,8 @@ Endpoints:
 Endpoints:
 POST `/create-payment-intent` -- Handles Payment Intent
 
+### 2. Inventory (Outsystems)
+https://personal-dwnxuxog.outsystemscloud.com/InventoryAtomicMicroservice/rest/RESTAPI/#/RESTAPI/UpdateStock 
 
 ## Composite Services
 
@@ -393,24 +396,42 @@ POST `/create-payment-intent` -- Handles Payment Intent
 **Type**: Composite
 **Description**: Updates waitlist entries
 
-### 3. Subscribe Service (Port: 5018)
+### 3. Delete Cart Entries (Port: 5015)
+**Type**: Composite
+**Description**: Verifies comic history for users
+
+### 4. Delete Cart Entries (Port: 5016)
+**Type**: Composite
+**Description**: Removes a single cart entry from a user's cart
+**Note**: Not part of any scenario but helps to make the website more cohesive
+
+### 5. Subscribe Service (Port: 5018)
 **Type**: Composite
 **Description**: Manages premium subscriptions with Stripe integration
 **Required packages**: stripe
 
-### 4. Process Payment Service (Port: 5021)
+### 6. Read Comic (Port: 5020)
+**Type**: Composite
+**Description**: Manages comic permissions
+
+### 7. Process Payment Service (Port: 5021)
 **Type**: Composite
 **Description**: Processes payments through Stripe API
 **Note**: Was previously on port 5099
 
-### 5. Book Payment Service (Port: 5022)
+### 8. Book Payment Service (Port: 5022)
 **Type**: Composite
 **Description**: Handles book purchase payments 
 **Note**: Was previously on port 5100
 
+### 9. View Comments (Port: 5025)
+**Type**: Composite
+**Description**: Removes a single cart entry from a user's cart
+**Note**: Not part of any scenario but helps to make the website more cohesive
+
 ## Access Front-end
 
-Need to redo this
+localhost:8080 leads u to the comics.html page. All other pages can be accessed from there
 
 ## Dependency Installation
 
