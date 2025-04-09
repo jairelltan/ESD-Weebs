@@ -28,6 +28,7 @@ This project has been dockerized for easy deployment. The setup includes:
 
 - Docker
 - Docker Compose
+- WAMP/MAMP
 
 ### Running the Application
 
